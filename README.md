@@ -34,7 +34,7 @@ Until `API_URL` is set, the site runs in **demo mode**: data is saved only in th
 
 ## Customizing
 
-Everything you're likely to change is in the `CUSTOMIZE HERE` block at the top of the script in `index.html`: people, tags, areas, currencies, payment methods, labels and payment tags. To add a currency, add one line, e.g. `KRW: { symbol: "₩", decimals: 0 }`.
+Everything you're likely to change is in the `CUSTOMIZE HERE` block at the top of the script in `index.html`: people, trip dates (`TRIP_START` / `TRIP_END`, which set Day 1 and the days in the Day filter), cities and areas, tags, currencies, payment methods, labels and payment tags. To add a currency, add one line, e.g. `KRW: { symbol: "₩", decimals: 0 }`.
 
 ## Notes
 

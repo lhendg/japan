@@ -844,6 +844,10 @@
   ];
   const DEFAULT_CITY = "Tokyo";
 
+  // Trip dates: the Day filter always lists every day in this range (Day 1 = start)
+  const TRIP_START = "2026-11-08";
+  const TRIP_END   = "2026-11-16";
+
   // Add a currency here to make it selectable (code → symbol, decimals shown).
   const CURRENCIES = {
     JPY: { symbol: "¥",  decimals: 0 },
@@ -1078,7 +1082,8 @@
   }
 
   // ─── Itinerary ───────────────────────────────────────────────
-  const itinFilter = { q: "", day: "", city: "", area: "", tags: new Set() };
+  // The chosen day is remembered, and new stops are created on it
+  const itinFilter = { q: "", day: store.get("japan.itinDay", ""), city: "", area: "", tags: new Set() };
   cityOptions($("itinCity"), "All cities");
   areaOptions($("itinArea"), "All areas", "");
 
@@ -1121,12 +1126,16 @@
   }
 
   function renderItinerary() {
-    const allDates = [...new Set(db.Itinerary.flatMap(spanDays).filter(Boolean))].sort();
-    const dayNo = d => allDates.indexOf(d) + 1;
+    // Every trip day, plus any stop dated outside the trip
+    const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
+    const allDates = [...new Set([...tripDays, ...db.Itinerary.flatMap(spanDays).filter(Boolean)])].sort();
+    // Day N counts from the trip start; 0 for dates outside the trip
+    const dayNo = d => tripDays.indexOf(d) + 1;
+    const dayLabel = d => dayNo(d) ? `Day ${dayNo(d)} · ` : "Outside trip · ";
 
     const daySel = $("itinDay");
     daySel.innerHTML = `<option value="">All days</option>` +
-      allDates.map(d => `<option value="${d}">Day ${dayNo(d)} · ${esc(fmtDate(d))}</option>`).join("") +
+      allDates.map(d => `<option value="${d}">${dayLabel(d)}${esc(fmtDate(d))}</option>`).join("") +
       `<option value="__none">Not scheduled</option>`;
     if (itinFilter.day && itinFilter.day !== "__none" && !allDates.includes(itinFilter.day)) itinFilter.day = "";
     daySel.value = itinFilter.day;
@@ -1143,7 +1152,13 @@
 
     const out = $("itinList");
     if (!db.Itinerary.length) { out.innerHTML = emptyState("🗾", "No plans yet.<br>Tap <b>+</b> to add your first stop."); return; }
-    if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
+    if (!rows.length) {
+      const onlyDay = itinFilter.day && itinFilter.day !== "__none" && !itinFilter.q && !itinFilter.city && !itinFilter.tags.size;
+      out.innerHTML = onlyDay
+        ? emptyState("🗓️", `Nothing planned for ${dayLabel(itinFilter.day)}${esc(fmtDate(itinFilter.day))} yet.<br>Tap <b>+</b> to add a stop on this day.`)
+        : emptyState("🔍", "Nothing matches these filters.");
+      return;
+    }
 
     // One entry per stop per day it covers
     const groups = new Map();
@@ -1164,7 +1179,7 @@
         (!sortTime(a)) - (!sortTime(b)) || (sortTime(a) || "").localeCompare(sortTime(b) || "") ||
         (a.r.created_at || "").localeCompare(b.r.created_at || ""));
       const head = k
-        ? `<div class="group-title"><span class="day-pill">DAY ${dayNo(k)}</span>${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
+        ? `<div class="group-title">${dayNo(k) ? `<span class="day-pill">DAY ${dayNo(k)}</span>` : `<span class="day-pill">OUTSIDE TRIP</span>`}${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
         : `<div class="group-title">Not scheduled yet</div>`;
       return `<div class="group">
         <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
@@ -1181,7 +1196,7 @@
   }
 
   $("itinSearch").addEventListener("input", e => { itinFilter.q = e.target.value.trim(); renderItinerary(); });
-  $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; renderItinerary(); });
+  $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; store.set("japan.itinDay", itinFilter.day); renderItinerary(); });
   $("itinArea").addEventListener("change", e => { itinFilter.area = e.target.value; renderItinerary(); });
   $("itinCity").addEventListener("change", e => {
     itinFilter.city = e.target.value;

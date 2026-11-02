@@ -761,11 +761,17 @@
     </div>
 
     <div class="field" id="pScheduleField">
-      <label>Schedule <span class="opt">(optional)</span></label>
+      <label>Start <span class="opt">(optional)</span></label>
       <div class="row2">
-        <input class="input" id="pDate" type="date">
-        <input class="input" id="pTime" type="time">
+        <input class="input" id="pDate" type="date" aria-label="Start date">
+        <input class="input" id="pTime" type="time" aria-label="Start time">
       </div>
+      <label style="margin-top:14px;">End <span class="opt">(optional — leave the date blank if it ends the same day)</span></label>
+      <div class="row2">
+        <input class="input" id="pEndDate" type="date" aria-label="End date">
+        <input class="input" id="pEndTime" type="time" aria-label="End time">
+      </div>
+      <div class="error-text" id="pScheduleError"></div>
     </div>
 
     <div class="field">
@@ -867,10 +873,8 @@
   let db = normalize(store.get("japan.cache", EMPTY_DB()));
 
   // ─── Dates & money ───────────────────────────────────────────
-  function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
+  const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayISO = () => isoOf(new Date());
   function parseISO(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
     return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
@@ -1061,8 +1065,46 @@
   cityOptions($("itinCity"), "All cities");
   areaOptions($("itinArea"), "All areas", "");
 
+  // Every date a stop covers, start through end (capped so a typo can't run away)
+  function spanDays(r) {
+    if (!r.date) return [""];
+    const days = [r.date];
+    if (r.end_date > r.date) {
+      const d = parseISO(r.date);
+      while (days.length < 60) {
+        d.setDate(d.getDate() + 1);
+        const s = isoOf(d);
+        if (s > r.end_date) break;
+        days.push(s);
+      }
+    }
+    return days;
+  }
+
+  const clock = t => `${fmtTime(t)} ${ampm(t)}`;
+
+  // Time column + range pills for one stop on one of its days
+  function whenFor(r, idx, total) {
+    if (total > 1) {
+      // Times already show in the time column on the first and last day
+      const startTxt = fmtDate(r.date, { month: "short", day: "numeric" });
+      const endTxt = fmtDate(r.end_date, { month: "short", day: "numeric" });
+      const col = idx === 0
+        ? (r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>From</small>`)
+        : idx === total - 1
+          ? (r.end_time ? `<small>until</small>${esc(fmtTime(r.end_time))}<small>${ampm(r.end_time)}</small>` : `<small>Last day</small>`)
+          : `<small>All day</small>`;
+      return { col, pills: `<span class="pill">📅 ${esc(startTxt)} → ${esc(endTxt)}</span><span class="pill">Day ${idx + 1} of ${total}</span>` };
+    }
+    const col = r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>—</small>`;
+    const pills = r.end_time
+      ? `<span class="pill">🕘 ${r.time ? esc(clock(r.time)) + " – " : "until "}${esc(clock(r.end_time))}</span>`
+      : "";
+    return { col, pills };
+  }
+
   function renderItinerary() {
-    const allDates = [...new Set(db.Itinerary.map(r => r.date).filter(Boolean))].sort();
+    const allDates = [...new Set(db.Itinerary.flatMap(spanDays).filter(Boolean))].sort();
     const dayNo = d => allDates.indexOf(d) + 1;
 
     const daySel = $("itinDay");
@@ -1079,35 +1121,46 @@
       (!itinFilter.city || rowCity(r) === itinFilter.city) &&
       (!itinFilter.area || r.area === itinFilter.area) &&
       (!itinFilter.tags.size || itinFilter.tags.has(r.tag)) &&
-      (!itinFilter.day || (itinFilter.day === "__none" ? !r.date : r.date === itinFilter.day))
+      (!itinFilter.day || (itinFilter.day === "__none" ? !r.date : spanDays(r).includes(itinFilter.day)))
     );
 
     const out = $("itinList");
     if (!db.Itinerary.length) { out.innerHTML = emptyState("🗾", "No plans yet.<br>Tap <b>+</b> to add your first stop."); return; }
     if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
 
+    // One entry per stop per day it covers
     const groups = new Map();
-    rows.forEach(r => { const k = r.date || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    rows.forEach(r => {
+      const days = spanDays(r);
+      days.forEach((k, idx) => {
+        if (itinFilter.day && itinFilter.day !== "__none" && k !== itinFilter.day) return;
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push({ r, idx, total: days.length });
+      });
+    });
     const keys = [...groups.keys()].sort((a, b) => (!a) - (!b) || a.localeCompare(b));
+    // Stops already under way (from an earlier day) sort first, then by start time
+    const sortTime = e => e.idx > 0 ? "00:00" : e.r.time;
 
     out.innerHTML = keys.map(k => {
       const items = groups.get(k).sort((a, b) =>
-        (!a.time) - (!b.time) || (a.time || "").localeCompare(b.time || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+        (!sortTime(a)) - (!sortTime(b)) || (sortTime(a) || "").localeCompare(sortTime(b) || "") ||
+        (a.r.created_at || "").localeCompare(b.r.created_at || ""));
       const head = k
         ? `<div class="group-title"><span class="day-pill">DAY ${dayNo(k)}</span>${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
         : `<div class="group-title">Not scheduled yet</div>`;
       return `<div class="group">
         <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
-        ${items.map(r => `
+        ${items.map(({ r, idx, total }) => { const w = whenFor(r, idx, total); return `
           <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}">
-            <div class="when">${r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>—</small>`}</div>
+            <div class="when">${w.col}</div>
             <div class="body">
-              ${placeCardBody(r)}
+              ${placeCardBody(r, w.pills)}
               <div class="card-actions">
                 <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Open in Maps</a>
               </div>
             </div>
-          </div>`).join("")}
+          </div>`; }).join("")}
       </div>`;
     }).join("");
   }
@@ -1219,6 +1272,7 @@
   // ─── Place sheet ─────────────────────────────────────────────
   let sheetCtx = null; // { sheet, row, prefill, tag }
   cityOptions($("pCity"), "— No city —");
+  $("pDate").addEventListener("change", e => { $("pEndDate").min = e.target.value; });
   $("pCity").addEventListener("change", e => areaOptions($("pArea"), "— No area —", e.target.value, $("pAreaField")));
 
   function renderPlaceTags() {
@@ -1244,6 +1298,10 @@
     $("pArea").value = src.area || "";
     $("pDate").value = src.date || (isItin && !row ? (itinFilter.day && itinFilter.day !== "__none" ? itinFilter.day : "") : "");
     $("pTime").value = src.time || "";
+    $("pEndDate").value = src.end_date || "";
+    $("pEndTime").value = src.end_time || "";
+    $("pEndDate").min = $("pDate").value;
+    $("pScheduleError").style.display = "none";
     $("pMap").value = src.map_url || "";
     $("pNotes").value = src.notes || "";
     $("pNameError").style.display = "none";
@@ -1278,8 +1336,22 @@
       map_url: $("pMap").value.trim(),
     };
     if (sheet === "Itinerary") {
-      data.date = $("pDate").value;
-      data.time = $("pTime").value;
+      const date = $("pDate").value, time = $("pTime").value;
+      const endDate = $("pEndDate").value, endTime = $("pEndTime").value;
+      const problem =
+        endDate && !date ? "Add a start date first." :
+        endDate && endDate < date ? "The end date is before the start date." :
+        (!endDate || endDate === date) && time && endTime && endTime < time ? "The end time is before the start time." : "";
+      if (problem) {
+        $("pScheduleError").textContent = problem;
+        $("pScheduleError").style.display = "block";
+        $("pScheduleField").scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
+      data.date = date;
+      data.time = time;
+      data.end_date = endDate === date ? "" : endDate;
+      data.end_time = endTime;
       data.saved_id = row ? (row.saved_id || "") : (prefill.saved_id || "");
     }
     closePlaceSheet();

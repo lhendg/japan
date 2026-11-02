@@ -775,7 +775,7 @@
     </div>
 
     <div class="field">
-      <label>Maps link <span class="opt">(optional, otherwise searched by name)</span></label>
+      <label>Maps link <span class="opt">(optional, shows a Maps button)</span></label>
       <input class="input" id="pMap" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/…">
     </div>
 
@@ -1011,11 +1011,12 @@
   document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
   // ─── Shared bits ─────────────────────────────────────────────
-  function mapsUrl(row) {
-    if (/^https?:\/\//i.test(row.map_url || "")) return row.map_url;
-    const area = row.area ? " " + row.area.split("/")[0].trim() : "";
-    const city = " " + (rowCity(row) || "Japan");
-    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${row.name}${area}${city}`);
+  // Maps button only when a Maps link was given
+  function mapsLink(row, text) {
+    let url = (row.map_url || "").trim();
+    if (!url) return "";
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    return `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener" data-stop>📍 ${text}</a>`;
   }
 
   // The optional second link: its label, or the site's name (e.g. "klook.com")
@@ -1172,9 +1173,7 @@
             <div class="when">${w.col}</div>
             <div class="body">
               ${placeCardBody(r, w.pills)}
-              <div class="card-actions">
-                <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Open in Maps</a>${extraLink(r)}
-              </div>
+              ${mapsLink(r, "Open in Maps") || extraLink(r) ? `<div class="card-actions">${mapsLink(r, "Open in Maps")}${extraLink(r)}</div>` : ""}
             </div>
           </div>`; }).join("")}
       </div>`;
@@ -1218,7 +1217,7 @@
         <div class="body">
           ${placeCardBody(r, inItin.has(r.id) ? `<span class="pill done">✓ In itinerary</span>` : "")}
           <div class="card-actions">
-            <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Maps</a>${extraLink(r)}
+            ${mapsLink(r, "Maps")}${extraLink(r)}
             <button class="link-btn orange" data-to-itin="${esc(r.id)}">＋ Itinerary</button>
           </div>
         </div>

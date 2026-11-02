@@ -30,7 +30,7 @@ Until `API_URL` is set, the site runs in **demo mode**: data is saved only in th
 | **Saved** | Places you might visit. Group them by area or tag, or not at all, and filter by tag or area. **＋ Itinerary** copies a place into the itinerary, and the saved card then shows *✓ In itinerary*. |
 | **Expenses** | **New expense** works like the expense_bot form, plus a currency picker (¥ JPY / ₱ PHP / $ USD). **History** shows the total in whichever currency you pick (converted at the day's rates from open.er-api.com), what each person paid and owes, who owes whom, spending by label, and the full list by day. Tap an expense to edit it. |
 
-**Maps links:** paste a Google Maps share link if you have one. If you leave it blank, the button searches Google Maps for *name + area + Tokyo*.
+**Links:** a card shows **📍 Maps** only when you paste a Maps link, and **🔗 …** only when you add an *Other link* (tickets, website, menu). Give it a button name, or it shows the site's name.
 
 ## Customizing
 

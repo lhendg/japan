@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Japan">
+<meta name="theme-color" content="#1c1c1e">
+<title>Japan</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗾</text></svg>">
+<style>
+  :root {
+    --bg: #1c1c1e;
+    --card: #2c2c2e;
+    --card-2: #3a3a3c;
+    --text: #ffffff;
+    --text-2: #d1d1d6;
+    --hint: #8e8e93;
+    --border: rgba(142,142,147,0.2);
+    --accent: #ff8a3d;
+    --green: #34c759;
+    --danger: #ff3b30;
+    --link: #0a84ff;
+    --tabbar-h: 64px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 0 16px calc(var(--tabbar-h) + 96px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  button { font-family: inherit; }
+
+  /* Header */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: calc(16px + env(safe-area-inset-top)) 0 4px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 4px 0 16px;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 17px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .icon-btn.spinning { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .banner {
+    background: rgba(255,138,61,0.12);
+    border: 1px solid rgba(255,138,61,0.35);
+    color: var(--text-2);
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+
+  /* Form fields (expense_bot style) */
+  .field { margin-bottom: 20px; }
+
+  .field > label, .label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+  }
+  .opt { text-transform: none; font-weight: 400; font-size: 11px; }
+
+  .input, select, textarea {
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    font-family: inherit;
+  }
+  .input:focus, select:focus, textarea:focus { border-color: rgba(255,138,61,0.6); }
+  input[type="date"], input[type="time"] { min-height: 48px; color-scheme: dark; }
+
+  textarea { resize: vertical; }
+
+  select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238e8e93' stroke-width='1.5' fill='none' fill-rule='evenodd'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .amount-row {
+    display: flex;
+    align-items: center;
+    background: #000000;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .amount-row .currency {
+    padding: 0 4px 0 16px;
+    color: var(--hint);
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .amount-row input {
+    border: none;
+    background: transparent;
+    flex: 1;
+    min-width: 0;
+    font-size: 32px;
+    font-weight: 800;
+    padding: 14px 16px 14px 4px;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    font-family: inherit;
+  }
+  .amount-row input:focus { outline: none; }
+  .amount-row input::placeholder { color: rgba(255,255,255,0.2); }
+
+  .split-amount-row {
+    display: flex;
+    align-items: center;
+    background: #000000;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .split-amount-row .name-label {
+    padding: 0 4px 0 16px;
+    color: var(--hint);
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .split-amount-row input {
+    border: none;
+    background: transparent;
+    flex: 1;
+    width: 100%;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 12px 16px 12px 8px;
+    color: #ffffff;
+    text-align: right;
+    font-family: inherit;
+  }
+  .split-amount-row input:focus { outline: none; }
+  .split-amount-row input::placeholder { color: rgba(255,255,255,0.2); }
+  .split-amount-row input:disabled { color: var(--hint); }
+
+  .error-text { color: var(--danger); font-size: 13px; margin-top: 6px; display: none; }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips.scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px 2px;
+    scrollbar-width: none;
+  }
+  .chips.scroll::-webkit-scrollbar { display: none; }
+
+  .chip {
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .chip.small { padding: 6px 12px; font-size: 13px; }
+  .chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.add-new { color: var(--link); border-style: dashed; background: transparent; }
+  .new-label-input { display: none; margin-top: 10px; }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 15px 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .toggle-label { font-size: 16px; font-weight: 600; }
+  .toggle { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-thumb {
+    position: absolute;
+    inset: 0;
+    background: rgba(120,120,128,0.4);
+    border-radius: 999px;
+    transition: background 0.2s ease;
+    cursor: pointer;
+  }
+  .toggle-thumb::after {
+    content: "";
+    position: absolute;
+    width: 27px;
+    height: 27px;
+    left: 2px;
+    top: 2px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease;
+  }
+  .toggle input:checked + .toggle-thumb { background: var(--green); }
+  .toggle input:checked + .toggle-thumb::after { transform: translateX(20px); }
+
+  /* Buttons */
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    transition: background 0.15s ease, transform 0.1s ease;
+    cursor: pointer;
+  }
+  .submit-btn:active { transform: scale(0.97); }
+  .submit-btn.submitting { background: var(--green); pointer-events: none; }
+  .ghost-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--danger);
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  .ghost-btn.neutral { color: var(--text-2); }
+
+  /* Filters */
+  .filters { display: grid; gap: 10px; margin-bottom: 18px; }
+  .filters .row2 select, .filters .input { padding-top: 10px; padding-bottom: 10px; font-size: 15px; }
+  .filters input[type="search"] { min-height: 0; }
+
+  .segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3px;
+    margin-bottom: 20px;
+  }
+  .segmented button {
+    border: none;
+    background: transparent;
+    color: var(--hint);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 9px 6px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .segmented button.active { background: var(--card-2); color: var(--text); }
+
+  /* Groups & cards */
+  .group { margin-bottom: 24px; }
+  .group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 2px 10px;
+  }
+  .group-title { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+  .group-sub { font-size: 13px; color: var(--hint); font-weight: 600; white-space: nowrap; }
+  .day-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--accent);
+    background: rgba(255,138,61,0.14);
+    border-radius: 6px;
+    padding: 3px 7px;
+    margin-right: 8px;
+    vertical-align: 3px;
+    letter-spacing: 0.4px;
+  }
+
+  .card {
+    display: flex;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .card:active { background: #333336; }
+  .card .when {
+    width: 52px;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.25;
+    padding-top: 2px;
+  }
+  .card .when small { display: block; color: var(--hint); font-size: 11px; font-weight: 600; }
+  .card .body { flex: 1; min-width: 0; }
+  .card .title { font-size: 16px; font-weight: 700; line-height: 1.3; word-wrap: break-word; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .pill {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    background: var(--card-2);
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .pill.done { color: var(--green); background: rgba(52,199,89,0.14); }
+  .card .notes {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+  }
+  .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--link);
+    background: rgba(10,132,255,0.12);
+    border: none;
+    border-radius: 8px;
+    padding: 7px 11px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .link-btn.orange { color: var(--accent); background: rgba(255,138,61,0.12); }
+
+  .empty {
+    text-align: center;
+    color: var(--hint);
+    padding: 48px 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .empty .big { font-size: 44px; display: block; margin-bottom: 8px; }
+
+  /* Expense list */
+  .summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .summary-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .summary-total { font-size: 34px; font-weight: 800; letter-spacing: -0.8px; margin-top: 2px; }
+  .summary select { width: auto; padding: 7px 32px 7px 12px; font-size: 14px; border-radius: 10px; }
+  .summary-note { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  .people { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .person { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+  .person .name { font-size: 12px; color: var(--hint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .person .num { font-size: 17px; font-weight: 800; margin-top: 2px; }
+  .person .sub { font-size: 12px; color: var(--hint); margin-top: 2px; }
+  .settle { margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .bars { margin-top: 14px; display: grid; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items: center; font-size: 13px; }
+  .bar-row .lbl { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 99px; }
+  .bar-row .val { color: var(--hint); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .exp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .exp-row .desc { font-size: 15px; font-weight: 700; word-wrap: break-word; }
+  .exp-row .sub { font-size: 12px; color: var(--hint); margin-top: 3px; }
+  .exp-row .amt { text-align: right; font-weight: 800; font-size: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .exp-row .amt small { display: block; font-size: 12px; color: var(--hint); font-weight: 600; }
+
+  /* FAB + tab bar */
+  .fab {
+    position: fixed;
+    right: max(16px, calc(50vw - 344px));
+    bottom: calc(var(--tabbar-h) + 18px + env(safe-area-inset-bottom));
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 30px;
+    font-weight: 400;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    cursor: pointer;
+    z-index: 20;
+  }
+  .fab:active { transform: scale(0.94); }
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(28,28,30,0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    z-index: 30;
+  }
+  .tabbar button {
+    border: none;
+    background: transparent;
+    color: var(--hint);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .tabbar button .ico { font-size: 22px; filter: grayscale(1) opacity(0.6); }
+  .tabbar button.active { color: var(--accent); }
+  .tabbar button.active .ico { filter: none; }
+
+  /* Bottom sheet */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 50;
+    display: none;
+  }
+  .backdrop.visible { display: block; }
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 720px;
+    margin: 0 auto;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--bg);
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom));
+    z-index: 60;
+    transform: translateY(105%);
+    transition: transform 0.25s ease;
+  }
+  .sheet.visible { transform: translateY(0); }
+  .sheet-head {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 14px;
+    margin-bottom: 4px;
+    z-index: 1;
+  }
+  .sheet-head h2 { font-size: 18px; font-weight: 800; margin: 0; }
+  .sheet-head button {
+    border: none;
+    background: transparent;
+    color: var(--link);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .sheet-head button.save { color: var(--accent); font-weight: 800; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--tabbar-h) + 90px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(20px);
+    background: #3a3a3c;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 16px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 80;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1 id="pageTitle">Japan <span>itinerary</span></h1>
+    <button class="icon-btn" id="refreshBtn" title="Refresh from sheet" aria-label="Refresh">↻</button>
+  </div>
+
+  <div class="banner hidden" id="demoBanner">
+    Demo mode: no <b>API_URL</b> is set, so everything is saved on this device only.
+    See README.md to connect the Google Sheet.
+  </div>
+
+  <!-- ─── Itinerary ─── -->
+  <section id="tab-itinerary">
+    <div class="filters">
+      <input class="input" type="search" id="itinSearch" placeholder="Search places or notes">
+      <div class="row2">
+        <select id="itinDay"></select>
+        <select id="itinArea"></select>
+      </div>
+      <div class="chips scroll" id="itinTags"></div>
+    </div>
+    <div id="itinList"></div>
+  </section>
+
+  <!-- ─── Saved locations ─── -->
+  <section id="tab-saved" class="hidden">
+    <div class="filters">
+      <input class="input" type="search" id="savedSearch" placeholder="Search saved places">
+      <div class="row2">
+        <select id="savedGroup">
+          <option value="area">Group by area</option>
+          <option value="tag">Group by tag</option>
+          <option value="none">No grouping</option>
+        </select>
+        <select id="savedArea"></select>
+      </div>
+      <div class="chips scroll" id="savedTags"></div>
+    </div>
+    <div id="savedList"></div>
+  </section>
+
+  <!-- ─── Expenses ─── -->
+  <section id="tab-expenses" class="hidden">
+    <div class="segmented" id="expSeg">
+      <button data-mode="add" class="active">New expense</button>
+      <button data-mode="history">History</button>
+    </div>
+
+    <div id="expAdd">
+      <div class="field">
+        <label>Updated by</label>
+        <select class="input" id="recordedBy"></select>
+      </div>
+
+      <div class="field">
+        <label>Currency</label>
+        <div class="chips" id="currencyChips"></div>
+      </div>
+
+      <div class="field">
+        <label>Amount</label>
+        <div class="amount-row">
+          <span class="currency" id="currencyLabel">¥</span>
+          <input id="amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0">
+        </div>
+        <div class="error-text" id="amountError">Enter an amount greater than 0.</div>
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <input class="input" id="description" type="text" placeholder="e.g. Ichiran ramen, Suica top-up">
+      </div>
+
+      <div class="field">
+        <label>Date</label>
+        <input class="input" id="expDate" type="date">
+      </div>
+
+      <div class="field">
+        <label>Payment method</label>
+        <select class="input" id="paymentMethod"></select>
+      </div>
+
+      <div class="field">
+        <label>Labels</label>
+        <div class="chips" id="labelChips"></div>
+        <input class="input new-label-input" id="newLabelInput" type="text" placeholder="Type a new label, press enter">
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Split</span>
+        <label class="toggle">
+          <input type="checkbox" id="split">
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+
+      <div class="field" id="splitAmountField" style="display:none;">
+        <label>Split type</label>
+        <select class="input" id="splitType">
+          <option value="50/50">50/50</option>
+          <option value="Adjusted">Adjusted</option>
+          <option value="Exact Amount">Exact Amount</option>
+        </select>
+        <label style="margin-top:16px;">Split amount <span class="opt">(optional)</span></label>
+        <div id="splitAmountRows"></div>
+      </div>
+
+      <div class="field">
+        <label>Paid by</label>
+        <div class="chips" id="paidByChips"></div>
+      </div>
+
+      <div class="field">
+        <label>Notes <span class="opt">(optional)</span></label>
+        <textarea class="input" id="expNotes" rows="3" placeholder="Any extra detail..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Payment method tag <span class="opt">(optional)</span></label>
+        <div class="chips" id="paymentTagChips"></div>
+        <input class="input new-label-input" id="newPaymentTagInput" type="text" placeholder="Type a new tag, press enter">
+      </div>
+
+      <div class="field">
+        <label>Payment method note <span class="opt">(optional)</span></label>
+        <textarea class="input" id="paymentNotes" rows="2" placeholder="e.g. last 4 digits, account name..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="expSubmit">Add expense</button>
+      <button class="ghost-btn hidden" id="expDelete">Delete expense</button>
+      <button class="ghost-btn neutral hidden" id="expCancel">Cancel editing</button>
+    </div>
+
+    <div id="expHistory" class="hidden">
+      <div id="expSummary"></div>
+      <div class="chips scroll" id="expLabelFilter" style="margin-bottom:18px;"></div>
+      <div id="expList"></div>
+    </div>
+  </section>
+
+  <button class="fab" id="fab" aria-label="Add">+</button>
+
+  <nav class="tabbar">
+    <button data-tab="itinerary" class="active"><span class="ico">🗓️</span>Itinerary</button>
+    <button data-tab="saved"><span class="ico">📍</span>Saved</button>
+    <button data-tab="expenses"><span class="ico">💴</span>Expenses</button>
+  </nav>
+
+  <!-- Place sheet (itinerary + saved share it) -->
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="placeSheet" role="dialog" aria-modal="true">
+    <div class="sheet-head">
+      <button id="sheetCancel">Cancel</button>
+      <h2 id="sheetTitle">Add place</h2>
+      <button class="save" id="sheetSave">Save</button>
+    </div>
+
+    <div class="field">
+      <label>Place</label>
+      <input class="input" id="pName" type="text" placeholder="e.g. Senso-ji, Blue Bottle Kiyosumi">
+      <div class="error-text" id="pNameError">Give the place a name.</div>
+    </div>
+
+    <div class="field">
+      <label>Tag</label>
+      <div class="chips" id="pTags"></div>
+    </div>
+
+    <div class="field">
+      <label>Area <span class="opt">(optional)</span></label>
+      <select class="input" id="pArea"></select>
+    </div>
+
+    <div class="field" id="pScheduleField">
+      <label>Schedule <span class="opt">(optional)</span></label>
+      <div class="row2">
+        <input class="input" id="pDate" type="date">
+        <input class="input" id="pTime" type="time">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Google Maps link <span class="opt">(optional, otherwise searched by name)</span></label>
+      <input class="input" id="pMap" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/…">
+    </div>
+
+    <div class="field">
+      <label>Notes <span class="opt">(optional)</span></label>
+      <textarea class="input" id="pNotes" rows="3" placeholder="Reservations, what to order, opening hours..."></textarea>
+    </div>
+
+    <button class="submit-btn" id="pSubmit">Save</button>
+    <button class="ghost-btn neutral hidden" id="pToItin">＋ Add to itinerary</button>
+    <button class="ghost-btn hidden" id="pDelete">Delete</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // ─── CUSTOMIZE HERE ───────────────────────────────────────────
+  // Apps Script web app URL (ends in /exec). Leave empty for demo mode (this device only).
+  const API_URL = "";
+
+  const PEOPLE              = ["Lhen", "Owen"];
+  const RECORDED_BY_DEFAULT = "Lhen";
+  const PAID_BY_DEFAULT     = "Lhen";
+
+  const TAGS = [
+    { name: "Restaurant",     emoji: "🍜" },
+    { name: "Cafe",           emoji: "☕" },
+    { name: "Experience",     emoji: "🎢" },
+    { name: "View",           emoji: "🏔️" },
+    { name: "Shopping",       emoji: "🛍️" },
+    { name: "Transportation", emoji: "🚆", itineraryOnly: true },
+  ];
+
+  const AREAS = [
+    { name: "Asakusa / Ueno",               emoji: "🏯" },
+    { name: "Akihabara / Kanda",            emoji: "⚡" },
+    { name: "Tokyo Station / Marunouchi",   emoji: "🏙️" },
+    { name: "Ginza / Tsukiji",              emoji: "🛍️" },
+    { name: "Shibuya",                      emoji: "🌆" },
+    { name: "Harajuku / Omotesando",        emoji: "🌸" },
+    { name: "Shinjuku",                     emoji: "🏙️" },
+    { name: "Shimokitazawa / Setagaya",     emoji: "🎸" },
+    { name: "Roppongi / Akasaka",           emoji: "🌃" },
+    { name: "Odaiba / Tokyo Bay",           emoji: "🌊" },
+    { name: "Ryogoku / Sumida",             emoji: "🥋" },
+    { name: "Kiyosumi / Fukagawa",          emoji: "☕" },
+    { name: "Nihonbashi / Ningyocho",       emoji: "🏮" },
+    { name: "Jiyugaoka / Nakameguro",       emoji: "🌿" },
+    { name: "Kagurazaka / Iidabashi",       emoji: "🎎" },
+    { name: "Koenji / Nakano",              emoji: "🎶" },
+    { name: "Meguro / Gotanda / Shinagawa", emoji: "🌳" },
+    { name: "Sengawa / Chofu",              emoji: "🥚" },
+  ];
+
+  // Add a currency here to make it selectable (code → symbol, decimals shown).
+  const CURRENCIES = {
+    JPY: { symbol: "¥",  decimals: 0 },
+    PHP: { symbol: "₱",  decimals: 2 },
+    USD: { symbol: "$",  decimals: 2 },
+  };
+  const DEFAULT_CURRENCY = "JPY";
+
+  const PAYMENT_METHODS = ["Credit Card", "Cash", "IC Card (Suica/Pasmo)", "Bank Transfer"];
+  const PAYMENT_DEFAULT = "Credit Card";
+  const DEFAULT_LABELS  = ["Food", "Transport", "Lodging", "Shopping", "Activities", "Souvenirs", "Other"];
+  const PAYMENT_TAGS    = ["RCBC Plat", "RCBC Gold", "BDO CC", "BPI CC", "Gcash", "Maya", "Others"];
+  // ──────────────────────────────────────────────────────────────
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const tagOf = name => TAGS.find(t => t.name === name);
+  const areaOf = name => AREAS.find(a => a.name === name);
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const list = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean);
+
+  // Browser storage is a convenience cache only; the sheet is the source of truth.
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  const EMPTY_DB = () => ({ Itinerary: [], Saved: [], Expenses: [] });
+  let db = normalize(store.get("japan.cache", EMPTY_DB()));
+
+  // ─── Dates & money ───────────────────────────────────────────
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function parseISO(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function fmtDate(s, opts = { weekday: "short", month: "short", day: "numeric" }) {
+    const d = parseISO(s);
+    return d ? d.toLocaleDateString(undefined, opts) : s;
+  }
+  function fmtTime(t) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(t || "");
+    if (!m) return t || "";
+    const h = +m[1];
+    return `${((h + 11) % 12) + 1}:${m[2]}`;
+  }
+  const ampm = t => { const m = /^(\d{1,2})/.exec(t || ""); return m ? (+m[1] < 12 ? "AM" : "PM") : ""; };
+  function money(amount, cur) {
+    const c = CURRENCIES[cur] || { symbol: cur + " ", decimals: 2 };
+    const n = Number(amount) || 0;
+    return c.symbol + n.toLocaleString(undefined, { minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
+  }
+
+  // ─── Data layer ──────────────────────────────────────────────
+  function normalize(data) {
+    const out = EMPTY_DB();
+    for (const k of Object.keys(out)) out[k] = Array.isArray(data?.[k]) ? data[k].filter(r => r && r.id) : [];
+    out.Expenses.forEach(e => {
+      e.amount = Number(e.amount) || 0;
+      e.split = e.split === true || String(e.split).toUpperCase() === "TRUE";
+      e.currency = e.currency || DEFAULT_CURRENCY;
+    });
+    return out;
+  }
+
+  function applyLocal(target, action, sheet, data) {
+    const rows = target[sheet];
+    const i = rows.findIndex(r => r.id === data.id);
+    if (action === "delete") { if (i >= 0) rows.splice(i, 1); }
+    else if (i >= 0) rows[i] = { ...rows[i], ...data };
+    else rows.push({ created_at: new Date().toISOString(), ...data });
+  }
+
+  async function apiLoad() {
+    if (!API_URL) return store.get("japan.demo", EMPTY_DB());
+    const res = await fetch(API_URL + "?action=list");
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "Load failed");
+    return json.data;
+  }
+
+  async function apiWrite(action, sheet, data) {
+    if (!API_URL) {
+      const demo = normalize(store.get("japan.demo", EMPTY_DB()));
+      applyLocal(demo, action, sheet, data);
+      store.set("japan.demo", demo);
+      return;
+    }
+    // text/plain avoids a CORS preflight, which Apps Script cannot answer
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, sheet, data }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "Save failed");
+    return json.data;
+  }
+
+  // Optimistic: update the screen first, roll back if the sheet refuses.
+  async function mutate(action, sheet, data) {
+    const before = JSON.stringify(db);
+    applyLocal(db, action, sheet, data);
+    store.set("japan.cache", db);
+    renderAll();
+    try {
+      const saved = await apiWrite(action, sheet, data);
+      if (saved && action !== "delete") { applyLocal(db, "update", sheet, saved); store.set("japan.cache", db); }
+      return true;
+    } catch (err) {
+      db = normalize(JSON.parse(before));
+      store.set("japan.cache", db);
+      renderAll();
+      toast("Couldn't save: " + err.message, true);
+      return false;
+    }
+  }
+
+  async function refresh(quiet) {
+    $("refreshBtn").classList.add("spinning");
+    try {
+      db = normalize(await apiLoad());
+      store.set("japan.cache", db);
+      renderAll();
+      if (!quiet) toast("Up to date");
+    } catch (err) {
+      toast("Couldn't load: " + err.message, true);
+    } finally {
+      $("refreshBtn").classList.remove("spinning");
+    }
+  }
+
+  // ─── Toast ───────────────────────────────────────────────────
+  let toastTimer;
+  function toast(msg, isError) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.toggle("error", !!isError);
+    t.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("visible"), isError ? 4000 : 1800);
+  }
+
+  // ─── Tabs ────────────────────────────────────────────────────
+  const TAB_TITLES = { itinerary: "itinerary", saved: "saved", expenses: "expenses" };
+  let currentTab = store.get("japan.tab", "itinerary");
+
+  function showTab(tab) {
+    currentTab = tab;
+    store.set("japan.tab", tab);
+    document.querySelectorAll(".tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+    ["itinerary", "saved", "expenses"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== tab));
+    $("pageTitle").innerHTML = `Japan <span>${TAB_TITLES[tab]}</span>`;
+    $("fab").classList.toggle("hidden", tab === "expenses");
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+  // ─── Shared bits ─────────────────────────────────────────────
+  function mapsUrl(row) {
+    if (/^https?:\/\//i.test(row.map_url || "")) return row.map_url;
+    const area = row.area ? " " + row.area.split("/")[0].trim() : "";
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${row.name}${area} Tokyo`);
+  }
+
+  function areaOptions(select, allLabel) {
+    select.innerHTML = `<option value="">${allLabel}</option>` +
+      AREAS.map(a => `<option value="${esc(a.name)}">${a.emoji} ${esc(a.name)}</option>`).join("");
+  }
+
+  function tagFilterChips(el, tags, selected, onChange) {
+    el.innerHTML = tags.map(t =>
+      `<div class="chip small${selected.has(t.name) ? " selected" : ""}" data-tag="${esc(t.name)}">${t.emoji} ${esc(t.name)}</div>`
+    ).join("");
+    el.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+      const n = c.dataset.tag;
+      selected.has(n) ? selected.delete(n) : selected.add(n);
+      onChange();
+    }));
+  }
+
+  function matchesQuery(row, q) {
+    if (!q) return true;
+    return [row.name, row.notes, row.area, row.tag].join(" ").toLowerCase().includes(q.toLowerCase());
+  }
+
+  function placeCardBody(row, extraPills = "") {
+    const tag = tagOf(row.tag);
+    const area = areaOf(row.area);
+    return `
+      <div class="title">${tag ? tag.emoji + " " : ""}${esc(row.name)}</div>
+      <div class="meta">
+        ${tag ? `<span class="pill">${esc(tag.name)}</span>` : ""}
+        ${row.area ? `<span class="pill">${area ? area.emoji + " " : ""}${esc(row.area)}</span>` : ""}
+        ${extraPills}
+      </div>
+      ${row.notes ? `<div class="notes">${esc(row.notes)}</div>` : ""}`;
+  }
+
+  function emptyState(icon, text) {
+    return `<div class="empty"><span class="big">${icon}</span>${text}</div>`;
+  }
+
+  // ─── Itinerary ───────────────────────────────────────────────
+  const itinFilter = { q: "", day: "", area: "", tags: new Set() };
+  areaOptions($("itinArea"), "All areas");
+
+  function renderItinerary() {
+    const allDates = [...new Set(db.Itinerary.map(r => r.date).filter(Boolean))].sort();
+    const dayNo = d => allDates.indexOf(d) + 1;
+
+    const daySel = $("itinDay");
+    daySel.innerHTML = `<option value="">All days</option>` +
+      allDates.map(d => `<option value="${d}">Day ${dayNo(d)} · ${esc(fmtDate(d))}</option>`).join("") +
+      `<option value="__none">Not scheduled</option>`;
+    if (itinFilter.day && itinFilter.day !== "__none" && !allDates.includes(itinFilter.day)) itinFilter.day = "";
+    daySel.value = itinFilter.day;
+
+    tagFilterChips($("itinTags"), TAGS, itinFilter.tags, renderItinerary);
+
+    const rows = db.Itinerary.filter(r =>
+      matchesQuery(r, itinFilter.q) &&
+      (!itinFilter.area || r.area === itinFilter.area) &&
+      (!itinFilter.tags.size || itinFilter.tags.has(r.tag)) &&
+      (!itinFilter.day || (itinFilter.day === "__none" ? !r.date : r.date === itinFilter.day))
+    );
+
+    const out = $("itinList");
+    if (!db.Itinerary.length) { out.innerHTML = emptyState("🗾", "No plans yet.<br>Tap <b>+</b> to add your first stop."); return; }
+    if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
+
+    const groups = new Map();
+    rows.forEach(r => { const k = r.date || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    const keys = [...groups.keys()].sort((a, b) => (!a) - (!b) || a.localeCompare(b));
+
+    out.innerHTML = keys.map(k => {
+      const items = groups.get(k).sort((a, b) =>
+        (!a.time) - (!b.time) || (a.time || "").localeCompare(b.time || "") || (a.created_at || "").localeCompare(b.created_at || ""));
+      const head = k
+        ? `<div class="group-title"><span class="day-pill">DAY ${dayNo(k)}</span>${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
+        : `<div class="group-title">Not scheduled yet</div>`;
+      return `<div class="group">
+        <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
+        ${items.map(r => `
+          <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}">
+            <div class="when">${r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>—</small>`}</div>
+            <div class="body">
+              ${placeCardBody(r)}
+              <div class="card-actions">
+                <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Open in Maps</a>
+              </div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+    }).join("");
+  }
+
+  $("itinSearch").addEventListener("input", e => { itinFilter.q = e.target.value.trim(); renderItinerary(); });
+  $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; renderItinerary(); });
+  $("itinArea").addEventListener("change", e => { itinFilter.area = e.target.value; renderItinerary(); });
+
+  // ─── Saved locations ─────────────────────────────────────────
+  const savedFilter = { q: "", area: "", group: store.get("japan.savedGroup", "area"), tags: new Set() };
+  areaOptions($("savedArea"), "All areas");
+  $("savedGroup").value = savedFilter.group;
+
+  function renderSaved() {
+    const placeTags = TAGS.filter(t => !t.itineraryOnly);
+    tagFilterChips($("savedTags"), placeTags, savedFilter.tags, renderSaved);
+
+    const inItin = new Set(db.Itinerary.map(r => r.saved_id).filter(Boolean));
+    const rows = db.Saved.filter(r =>
+      matchesQuery(r, savedFilter.q) &&
+      (!savedFilter.area || r.area === savedFilter.area) &&
+      (!savedFilter.tags.size || savedFilter.tags.has(r.tag))
+    ).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+    const out = $("savedList");
+    if (!db.Saved.length) { out.innerHTML = emptyState("📍", "No saved places yet.<br>Tap <b>+</b> to save somewhere you want to go."); return; }
+    if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
+
+    const card = r => `
+      <div class="card" data-sheet="Saved" data-id="${esc(r.id)}">
+        <div class="body">
+          ${placeCardBody(r, inItin.has(r.id) ? `<span class="pill done">✓ In itinerary</span>` : "")}
+          <div class="card-actions">
+            <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Maps</a>
+            <button class="link-btn orange" data-to-itin="${esc(r.id)}">＋ Itinerary</button>
+          </div>
+        </div>
+      </div>`;
+
+    if (savedFilter.group === "none") { out.innerHTML = rows.map(card).join(""); return; }
+
+    const order = savedFilter.group === "area" ? AREAS.map(a => a.name) : placeTags.map(t => t.name);
+    const keyOf = r => (savedFilter.group === "area" ? r.area : r.tag) || "";
+    const groups = new Map();
+    rows.forEach(r => { const k = keyOf(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    const rank = k => { const i = order.indexOf(k); return k === "" ? 1e6 : i < 0 ? 1e5 : i; };
+    const label = k => {
+      if (!k) return savedFilter.group === "area" ? "No area" : "No tag";
+      const o = savedFilter.group === "area" ? areaOf(k) : tagOf(k);
+      return (o ? o.emoji + " " : "") + esc(k);
+    };
+
+    out.innerHTML = [...groups.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)).map(k => `
+      <div class="group">
+        <div class="group-head"><div class="group-title">${label(k)}</div><span class="group-sub">${groups.get(k).length}</span></div>
+        ${groups.get(k).map(card).join("")}
+      </div>`).join("");
+  }
+
+  $("savedSearch").addEventListener("input", e => { savedFilter.q = e.target.value.trim(); renderSaved(); });
+  $("savedArea").addEventListener("change", e => { savedFilter.area = e.target.value; renderSaved(); });
+  $("savedGroup").addEventListener("change", e => { savedFilter.group = e.target.value; store.set("japan.savedGroup", e.target.value); renderSaved(); });
+
+  // Card clicks: open editor, but let Maps links / buttons do their own thing
+  document.addEventListener("click", e => {
+    if (e.target.closest("[data-stop]")) return;
+    const toItin = e.target.closest("[data-to-itin]");
+    if (toItin) {
+      const s = db.Saved.find(r => r.id === toItin.dataset.toItin);
+      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id });
+      return;
+    }
+    const card = e.target.closest(".card[data-sheet]");
+    if (card) {
+      const row = db[card.dataset.sheet].find(r => r.id === card.dataset.id);
+      if (row) openPlaceSheet(card.dataset.sheet, row);
+    }
+  });
+
+  // ─── Place sheet ─────────────────────────────────────────────
+  let sheetCtx = null; // { sheet, row, prefill, tag }
+  areaOptions($("pArea"), "— No area —");
+
+  function renderPlaceTags() {
+    const tags = TAGS.filter(t => sheetCtx.sheet === "Itinerary" || !t.itineraryOnly);
+    $("pTags").innerHTML = tags.map(t =>
+      `<div class="chip${sheetCtx.tag === t.name ? " selected" : ""}" data-tag="${esc(t.name)}">${t.emoji} ${esc(t.name)}</div>`).join("");
+    $("pTags").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+      sheetCtx.tag = sheetCtx.tag === c.dataset.tag ? "" : c.dataset.tag;
+      renderPlaceTags();
+    }));
+  }
+
+  function openPlaceSheet(sheet, row, prefill = {}) {
+    const src = row || prefill;
+    sheetCtx = { sheet, row, prefill, tag: src.tag || "" };
+    const isItin = sheet === "Itinerary";
+    $("sheetTitle").textContent = (row ? "Edit " : "Add ") + (isItin ? "stop" : "saved place");
+    $("pName").value = src.name || "";
+    $("pArea").value = src.area || "";
+    $("pDate").value = src.date || (isItin && !row ? (itinFilter.day && itinFilter.day !== "__none" ? itinFilter.day : "") : "");
+    $("pTime").value = src.time || "";
+    $("pMap").value = src.map_url || "";
+    $("pNotes").value = src.notes || "";
+    $("pNameError").style.display = "none";
+    $("pScheduleField").classList.toggle("hidden", !isItin);
+    $("pSubmit").textContent = row ? "Save changes" : (isItin ? "Add to itinerary" : "Save place");
+    $("pDelete").classList.toggle("hidden", !row);
+    $("pToItin").classList.toggle("hidden", !(row && sheet === "Saved"));
+    renderPlaceTags();
+    $("backdrop").classList.add("visible");
+    $("placeSheet").classList.add("visible");
+    $("placeSheet").scrollTop = 0;
+    if (!row && !prefill.name) setTimeout(() => $("pName").focus(), 260);
+  }
+
+  function closePlaceSheet() {
+    $("backdrop").classList.remove("visible");
+    $("placeSheet").classList.remove("visible");
+    sheetCtx = null;
+  }
+
+  async function savePlace() {
+    const name = $("pName").value.trim();
+    if (!name) { $("pNameError").style.display = "block"; $("pName").focus(); return; }
+    const { sheet, row, prefill } = sheetCtx;
+    const data = {
+      id: row ? row.id : uid(),
+      name,
+      tag: sheetCtx.tag,
+      area: $("pArea").value,
+      notes: $("pNotes").value.trim(),
+      map_url: $("pMap").value.trim(),
+    };
+    if (sheet === "Itinerary") {
+      data.date = $("pDate").value;
+      data.time = $("pTime").value;
+      data.saved_id = row ? (row.saved_id || "") : (prefill.saved_id || "");
+    }
+    closePlaceSheet();
+    if (await mutate(row ? "update" : "create", sheet, data)) {
+      toast(row ? "Saved" : sheet === "Itinerary" ? "Added to itinerary" : "Place saved");
+    }
+  }
+
+  async function deletePlace() {
+    const { sheet, row } = sheetCtx;
+    if (!confirm(`Delete “${row.name}”?`)) return;
+    closePlaceSheet();
+    if (await mutate("delete", sheet, { id: row.id })) toast("Deleted");
+  }
+
+  $("sheetCancel").addEventListener("click", closePlaceSheet);
+  $("backdrop").addEventListener("click", closePlaceSheet);
+  $("sheetSave").addEventListener("click", savePlace);
+  $("pSubmit").addEventListener("click", savePlace);
+  $("pDelete").addEventListener("click", deletePlace);
+  $("pToItin").addEventListener("click", () => {
+    const s = sheetCtx.row;
+    closePlaceSheet();
+    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id }), 260);
+  });
+  $("fab").addEventListener("click", () => openPlaceSheet(currentTab === "saved" ? "Saved" : "Itinerary", null));
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetCtx) closePlaceSheet(); });
+
+  // ─── Expenses: form (mirrors expense_bot) ───────────────────
+  let editingExpense = null;
+  let expCurrency = store.get("japan.currency", DEFAULT_CURRENCY);
+  if (!CURRENCIES[expCurrency]) expCurrency = DEFAULT_CURRENCY;
+
+  PEOPLE.forEach(p => { const o = document.createElement("option"); o.value = o.textContent = p; $("recordedBy").appendChild(o); });
+  PAYMENT_METHODS.forEach(m => { const o = document.createElement("option"); o.value = o.textContent = m; $("paymentMethod").appendChild(o); });
+
+  function renderCurrencyChips() {
+    $("currencyChips").innerHTML = Object.entries(CURRENCIES).map(([code, c]) =>
+      `<div class="chip${code === expCurrency ? " selected" : ""}" data-cur="${code}">${c.symbol} ${code}</div>`).join("");
+    $("currencyChips").querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => {
+      expCurrency = ch.dataset.cur;
+      if (!editingExpense) store.set("japan.currency", expCurrency);
+      renderCurrencyChips();
+    }));
+    $("currencyLabel").textContent = CURRENCIES[expCurrency].symbol;
+    $("amount").placeholder = CURRENCIES[expCurrency].decimals ? "0.00" : "0";
+  }
+
+  // Labels: defaults + any label already used in the sheet
+  let selectedLabels = new Set();
+  let extraLabels = [];
+  function allLabels() {
+    const used = db.Expenses.flatMap(e => list(e.labels));
+    return [...new Set([...DEFAULT_LABELS, ...used, ...extraLabels])];
+  }
+  function renderLabelChips() {
+    const el = $("labelChips");
+    el.innerHTML = allLabels().map(l => `<div class="chip${selectedLabels.has(l) ? " selected" : ""}" data-l="${esc(l)}">${esc(l)}</div>`).join("") +
+      `<div class="chip add-new" data-add>+ Add</div>`;
+    el.querySelectorAll(".chip[data-l]").forEach(c => c.addEventListener("click", () => {
+      const l = c.dataset.l; selectedLabels.has(l) ? selectedLabels.delete(l) : selectedLabels.add(l); renderLabelChips();
+    }));
+    el.querySelector("[data-add]").addEventListener("click", () => { $("newLabelInput").style.display = "block"; $("newLabelInput").focus(); });
+  }
+  $("newLabelInput").addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v) { extraLabels.push(v); selectedLabels.add(v); }
+    e.target.value = ""; e.target.style.display = "none";
+    renderLabelChips();
+  });
+
+  let selectedPaymentTag = null;
+  let paymentTags = [...PAYMENT_TAGS];
+  function renderPaymentTagChips() {
+    const el = $("paymentTagChips");
+    el.innerHTML = paymentTags.map(t => `<div class="chip${selectedPaymentTag === t ? " selected" : ""}" data-t="${esc(t)}">${esc(t)}</div>`).join("") +
+      `<div class="chip add-new" data-add>+ Add</div>`;
+    el.querySelectorAll(".chip[data-t]").forEach(c => c.addEventListener("click", () => {
+      selectedPaymentTag = selectedPaymentTag === c.dataset.t ? null : c.dataset.t; renderPaymentTagChips();
+    }));
+    el.querySelector("[data-add]").addEventListener("click", () => { $("newPaymentTagInput").style.display = "block"; $("newPaymentTagInput").focus(); });
+  }
+  $("newPaymentTagInput").addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v && !paymentTags.includes(v)) paymentTags.push(v);
+    if (v) selectedPaymentTag = v;
+    e.target.value = ""; e.target.style.display = "none";
+    renderPaymentTagChips();
+  });
+
+  let selectedPaidBy = new Set([PAID_BY_DEFAULT]);
+  function renderPaidByChips() {
+    $("paidByChips").innerHTML = PEOPLE.map(p => `<div class="chip${selectedPaidBy.has(p) ? " selected" : ""}" data-p="${esc(p)}">${esc(p)}</div>`).join("");
+    $("paidByChips").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+      const p = c.dataset.p; selectedPaidBy.has(p) ? selectedPaidBy.delete(p) : selectedPaidBy.add(p); renderPaidByChips();
+    }));
+  }
+
+  const splitInputs = {};
+  PEOPLE.forEach(name => {
+    const row = document.createElement("div");
+    row.className = "split-amount-row";
+    row.innerHTML = `<span class="name-label">${esc(name)}</span><input type="number" inputmode="decimal" step="0.01" min="0" placeholder="0">`;
+    $("splitAmountRows").appendChild(row);
+    splitInputs[name] = row.querySelector("input");
+  });
+  const splitKey = name => "split_amount_" + name.toLowerCase();
+
+  function updateSplitAmounts() {
+    const isHalf = $("splitType").value === "50/50";
+    const amt = parseFloat($("amount").value) || 0;
+    const share = amt ? +(amt / PEOPLE.length).toFixed(2) : "";
+    PEOPLE.forEach(n => { splitInputs[n].disabled = isHalf; if (isHalf) splitInputs[n].value = share; });
+  }
+  function updateSplitVisibility() {
+    $("splitAmountField").style.display = $("split").checked ? "block" : "none";
+    if ($("split").checked) updateSplitAmounts();
+  }
+  $("split").addEventListener("change", updateSplitVisibility);
+  $("splitType").addEventListener("change", updateSplitAmounts);
+  $("amount").addEventListener("input", updateSplitAmounts);
+
+  function resetExpenseForm() {
+    editingExpense = null;
+    expCurrency = store.get("japan.currency", DEFAULT_CURRENCY);
+    if (!CURRENCIES[expCurrency]) expCurrency = DEFAULT_CURRENCY;
+    $("amount").value = "";
+    $("description").value = "";
+    $("expDate").value = todayISO();
+    $("paymentMethod").value = PAYMENT_DEFAULT;
+    $("recordedBy").value = RECORDED_BY_DEFAULT;
+    $("expNotes").value = "";
+    $("paymentNotes").value = "";
+    $("split").checked = false;
+    $("splitType").value = "50/50";
+    PEOPLE.forEach(n => { splitInputs[n].value = ""; splitInputs[n].disabled = false; });
+    selectedLabels = new Set();
+    selectedPaidBy = new Set([PAID_BY_DEFAULT]);
+    selectedPaymentTag = null;
+    $("amountError").style.display = "none";
+    $("expSubmit").textContent = "Add expense";
+    $("expSubmit").classList.remove("submitting");
+    $("expDelete").classList.add("hidden");
+    $("expCancel").classList.add("hidden");
+    renderExpenseForm();
+    updateSplitVisibility();
+  }
+
+  function renderExpenseForm() {
+    renderCurrencyChips();
+    renderLabelChips();
+    renderPaymentTagChips();
+    renderPaidByChips();
+  }
+
+  function editExpense(e) {
+    editingExpense = e;
+    expCurrency = CURRENCIES[e.currency] ? e.currency : DEFAULT_CURRENCY;
+    $("amount").value = e.amount || "";
+    $("description").value = e.description || "";
+    $("expDate").value = e.date || todayISO();
+    $("paymentMethod").value = PAYMENT_METHODS.includes(e.payment_method) ? e.payment_method : PAYMENT_DEFAULT;
+    $("recordedBy").value = PEOPLE.includes(e.updated_by) ? e.updated_by : RECORDED_BY_DEFAULT;
+    $("expNotes").value = e.notes || "";
+    $("paymentNotes").value = e.payment_notes || "";
+    $("split").checked = !!e.split;
+    $("splitType").value = e.split_type || "50/50";
+    PEOPLE.forEach(n => { splitInputs[n].value = e[splitKey(n)] ?? ""; });
+    selectedLabels = new Set(list(e.labels));
+    selectedPaidBy = new Set(list(e.paid_by));
+    selectedPaymentTag = e.payment_tag || null;
+    if (selectedPaymentTag && !paymentTags.includes(selectedPaymentTag)) paymentTags.push(selectedPaymentTag);
+    $("expSubmit").textContent = "Save changes";
+    $("expDelete").classList.remove("hidden");
+    $("expCancel").classList.remove("hidden");
+    renderExpenseForm();
+    updateSplitVisibility();
+    setExpMode("add");
+  }
+
+  async function submitExpense() {
+    const amt = parseFloat($("amount").value);
+    const valid = amt > 0;
+    $("amountError").style.display = valid ? "none" : "block";
+    if (!valid) { $("amount").focus(); return; }
+
+    const data = {
+      id: editingExpense ? editingExpense.id : uid(),
+      date: $("expDate").value,
+      description: $("description").value.trim(),
+      amount: amt,
+      currency: expCurrency,
+      payment_method: $("paymentMethod").value,
+      payment_tag: selectedPaymentTag || "",
+      payment_notes: $("paymentNotes").value.trim(),
+      labels: [...selectedLabels].join(", "),
+      split: $("split").checked,
+      split_type: $("split").checked ? $("splitType").value : "",
+      paid_by: [...selectedPaidBy].join(", "),
+      notes: $("expNotes").value.trim(),
+      updated_by: $("recordedBy").value,
+    };
+    PEOPLE.forEach(n => {
+      const raw = splitInputs[n].value;
+      data[splitKey(n)] = $("split").checked && raw !== "" ? parseFloat(raw) : "";
+    });
+
+    const wasEditing = !!editingExpense;
+    $("expSubmit").classList.add("submitting");
+    $("expSubmit").textContent = "Logging...";
+    const ok = await mutate(wasEditing ? "update" : "create", "Expenses", data);
+    $("expSubmit").classList.remove("submitting");
+    if (ok) {
+      toast(`✅ ${money(data.amount, data.currency)} · ${data.payment_method} · ${fmtDate(data.date)}`);
+      resetExpenseForm();
+      if (wasEditing) setExpMode("history");
+    } else {
+      $("expSubmit").textContent = wasEditing ? "Save changes" : "Add expense";
+    }
+  }
+
+  $("expSubmit").addEventListener("click", submitExpense);
+  $("expCancel").addEventListener("click", () => { resetExpenseForm(); setExpMode("history"); });
+  $("expDelete").addEventListener("click", async () => {
+    const e = editingExpense;
+    if (!e || !confirm(`Delete “${e.description || money(e.amount, e.currency)}”?`)) return;
+    resetExpenseForm();
+    setExpMode("history");
+    if (await mutate("delete", "Expenses", { id: e.id })) toast("Deleted");
+  });
+
+  // ─── Expenses: history ───────────────────────────────────────
+  let expMode = "add";
+  let displayCurrency = store.get("japan.displayCurrency", DEFAULT_CURRENCY);
+  if (!CURRENCIES[displayCurrency]) displayCurrency = DEFAULT_CURRENCY;
+  const expLabelFilter = new Set();
+  let rates = null; // { base, rates: { CODE: units per 1 base } }
+
+  function setExpMode(mode) {
+    expMode = mode;
+    $("expSeg").querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    $("expAdd").classList.toggle("hidden", mode !== "add");
+    $("expHistory").classList.toggle("hidden", mode !== "history");
+    if (mode === "history") renderExpenses();
+    window.scrollTo(0, 0);
+  }
+  $("expSeg").querySelectorAll("button").forEach(b => b.addEventListener("click", () => setExpMode(b.dataset.mode)));
+
+  async function loadRates(base) {
+    const cached = store.get("japan.rates." + base, null);
+    if (cached && Date.now() - cached.ts < 6 * 3600e3) { rates = cached; return; }
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/" + base);
+      const json = await res.json();
+      if (json.result !== "success") throw new Error("rates");
+      rates = { base, rates: json.rates, ts: Date.now() };
+      store.set("japan.rates." + base, rates);
+    } catch {
+      rates = cached; // stale is better than nothing
+    }
+    renderExpenses();
+  }
+
+  // Returns null when the rate is unknown.
+  function convert(amount, from, to) {
+    if (from === to) return amount;
+    if (!rates || rates.base !== to || !rates.rates[from]) return null;
+    return amount / rates.rates[from];
+  }
+
+  // Each person's share of one expense, in its own currency.
+  function shares(e) {
+    const out = {};
+    PEOPLE.forEach(p => out[p] = 0);
+    if (e.split) {
+      const given = PEOPLE.map(p => e[splitKey(p)]).filter(v => v !== "" && v != null);
+      if (e.split_type !== "50/50" && given.length) PEOPLE.forEach(p => out[p] = Number(e[splitKey(p)]) || 0);
+      else PEOPLE.forEach(p => out[p] = e.amount / PEOPLE.length);
+    } else {
+      const payers = list(e.paid_by).filter(p => PEOPLE.includes(p));
+      (payers.length ? payers : PEOPLE).forEach((p, _, arr) => out[p] = e.amount / arr.length);
+    }
+    return out;
+  }
+
+  function renderExpenses() {
+    if (currentTab !== "expenses" || expMode !== "history") return;
+
+    const labels = allLabels().filter(l => db.Expenses.some(e => list(e.labels).includes(l)));
+    $("expLabelFilter").innerHTML = labels.map(l =>
+      `<div class="chip small${expLabelFilter.has(l) ? " selected" : ""}" data-l="${esc(l)}">${esc(l)}</div>`).join("");
+    $("expLabelFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+      const l = c.dataset.l; expLabelFilter.has(l) ? expLabelFilter.delete(l) : expLabelFilter.add(l); renderExpenses();
+    }));
+
+    const rows = db.Expenses.filter(e => !expLabelFilter.size || list(e.labels).some(l => expLabelFilter.has(l)));
+
+    // Summary in the display currency
+    let total = 0, unconverted = 0;
+    const byLabel = new Map();
+    const paid = {}, owe = {};
+    PEOPLE.forEach(p => { paid[p] = 0; owe[p] = 0; });
+    rows.forEach(e => {
+      const v = convert(e.amount, e.currency, displayCurrency);
+      if (v == null) { unconverted++; return; }
+      total += v;
+      const ls = list(e.labels);
+      (ls.length ? ls : ["Unlabeled"]).forEach(l => byLabel.set(l, (byLabel.get(l) || 0) + v / (ls.length || 1)));
+      const payers = list(e.paid_by).filter(p => PEOPLE.includes(p));
+      payers.forEach(p => paid[p] += v / payers.length);
+      const s = shares(e);
+      PEOPLE.forEach(p => owe[p] += convert(s[p], e.currency, displayCurrency) || 0);
+    });
+
+    const curOpts = Object.entries(CURRENCIES).map(([c, o]) => `<option value="${c}"${c === displayCurrency ? " selected" : ""}>${o.symbol} ${c}</option>`).join("");
+    const maxLabel = Math.max(1, ...byLabel.values());
+    const multiCur = rows.some(e => e.currency !== displayCurrency);
+
+    let settle = "";
+    if (PEOPLE.length === 2) {
+      const [a, b] = PEOPLE;
+      const net = paid[a] - owe[a]; // >0: b owes a
+      if (Math.abs(net) >= 0.5) settle = net > 0 ? `${esc(b)} owes ${esc(a)} ${money(net, displayCurrency)}` : `${esc(a)} owes ${esc(b)} ${money(-net, displayCurrency)}`;
+      else if (rows.length) settle = "All square 🤝";
+    }
+
+    $("expSummary").innerHTML = `
+      <div class="summary">
+        <div class="summary-top">
+          <div>
+            <div class="label" style="margin-bottom:0">Total spent${expLabelFilter.size ? " (filtered)" : ""}</div>
+            <div class="summary-total">${money(total, displayCurrency)}</div>
+          </div>
+          <select id="displayCurrency" aria-label="Show totals in">${curOpts}</select>
+        </div>
+        ${multiCur && rates && rates.base === displayCurrency ? `<div class="summary-note">Converted at today's rates</div>` : ""}
+        ${unconverted ? `<div class="summary-note">${unconverted} expense${unconverted === 1 ? "" : "s"} in other currencies not included (rates unavailable)</div>` : ""}
+        <div class="people">
+          ${PEOPLE.map(p => `<div class="person"><div class="name">${esc(p)}</div><div class="num">${money(paid[p], displayCurrency)}</div><div class="sub">paid · share ${money(owe[p], displayCurrency)}</div></div>`).join("")}
+        </div>
+        ${settle ? `<div class="settle">${settle}</div>` : ""}
+        ${byLabel.size ? `<div class="bars">${[...byLabel.entries()].sort((a, b) => b[1] - a[1]).map(([l, v]) => `
+          <div class="bar-row"><span class="lbl">${esc(l)}</span><div class="bar-track"><div class="bar-fill" style="width:${(v / maxLabel * 100).toFixed(1)}%"></div></div><span class="val">${money(v, displayCurrency)}</span></div>`).join("")}</div>` : ""}
+      </div>`;
+    $("displayCurrency").addEventListener("change", e => {
+      displayCurrency = e.target.value;
+      store.set("japan.displayCurrency", displayCurrency);
+      renderExpenses();
+      loadRates(displayCurrency);
+    });
+
+    const out = $("expList");
+    if (!db.Expenses.length) { out.innerHTML = emptyState("💴", "No expenses yet.<br>Log one under <b>New expense</b>."); return; }
+    if (!rows.length) { out.innerHTML = emptyState("🔍", "No expenses with these labels."); return; }
+
+    const groups = new Map();
+    rows.forEach(e => { const k = e.date || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); });
+    out.innerHTML = [...groups.keys()].sort((a, b) => (!a) - (!b) || b.localeCompare(a)).map(k => {
+      const items = groups.get(k).sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+      const dayTotal = items.reduce((s, e) => s + (convert(e.amount, e.currency, displayCurrency) || 0), 0);
+      return `<div class="group">
+        <div class="group-head"><div class="group-title">${k ? esc(fmtDate(k)) : "No date"}</div><span class="group-sub">${money(dayTotal, displayCurrency)}</span></div>
+        ${items.map(e => {
+          const conv = e.currency !== displayCurrency ? convert(e.amount, e.currency, displayCurrency) : null;
+          const sub = [list(e.labels).join(", "), e.paid_by && "paid by " + e.paid_by, e.split && "split " + (e.split_type || "")].filter(Boolean).join(" · ");
+          return `<div class="exp-row" data-exp="${esc(e.id)}">
+            <div><div class="desc">${esc(e.description || "(no description)")}</div><div class="sub">${esc(sub)}</div></div>
+            <div class="amt">${money(e.amount, e.currency)}${conv != null ? `<small>≈ ${money(conv, displayCurrency)}</small>` : ""}</div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("");
+  }
+
+  $("expList").addEventListener("click", ev => {
+    const row = ev.target.closest("[data-exp]");
+    if (!row) return;
+    const e = db.Expenses.find(x => x.id === row.dataset.exp);
+    if (e) editExpense(e);
+  });
+
+  // ─── Boot ────────────────────────────────────────────────────
+  function renderAll() {
+    renderItinerary();
+    renderSaved();
+    renderExpenses();
+    if (!editingExpense) renderLabelChips();
+  }
+
+  $("refreshBtn").addEventListener("click", () => refresh(false));
+  $("demoBanner").classList.toggle("hidden", !!API_URL);
+
+  showTab(currentTab);
+  resetExpenseForm();
+  renderAll();
+  refresh(true);
+  loadRates(displayCurrency);
+  document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => { if (b.dataset.tab === "expenses") renderExpenses(); }));
+</script>
+</body>
+</html>

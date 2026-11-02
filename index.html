@@ -775,8 +775,14 @@
     </div>
 
     <div class="field">
-      <label>Google Maps link <span class="opt">(optional, otherwise searched by name)</span></label>
+      <label>Maps link <span class="opt">(optional, otherwise searched by name)</span></label>
       <input class="input" id="pMap" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/…">
+    </div>
+
+    <div class="field">
+      <label>Other link <span class="opt">(optional: website, tickets, reservation, menu…)</span></label>
+      <input class="input" id="pLink" type="url" inputmode="url" placeholder="https://…">
+      <input class="input" id="pLinkLabel" type="text" placeholder="Button name, e.g. Tickets (default: the site's name)" style="margin-top:10px;">
     </div>
 
     <div class="field">
@@ -1012,6 +1018,16 @@
     return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${row.name}${area}${city}`);
   }
 
+  // The optional second link: its label, or the site's name (e.g. "klook.com")
+  function extraLink(row) {
+    let url = (row.link_url || "").trim();
+    if (!url) return "";
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    let label = row.link_label;
+    if (!label) { try { label = new URL(url).hostname.replace(/^www\./, ""); } catch { label = "Link"; } }
+    return `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener" data-stop>🔗 ${esc(label)}</a>`;
+  }
+
   function cityOptions(select, allLabel) {
     select.innerHTML = `<option value="">${allLabel}</option>` +
       CITIES.map(c => `<option value="${esc(c.name)}">${c.emoji} ${esc(c.name)}</option>`).join("");
@@ -1157,7 +1173,7 @@
             <div class="body">
               ${placeCardBody(r, w.pills)}
               <div class="card-actions">
-                <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Open in Maps</a>
+                <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Open in Maps</a>${extraLink(r)}
               </div>
             </div>
           </div>`; }).join("")}
@@ -1202,7 +1218,7 @@
         <div class="body">
           ${placeCardBody(r, inItin.has(r.id) ? `<span class="pill done">✓ In itinerary</span>` : "")}
           <div class="card-actions">
-            <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Maps</a>
+            <a class="link-btn" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener" data-stop>📍 Maps</a>${extraLink(r)}
             <button class="link-btn orange" data-to-itin="${esc(r.id)}">＋ Itinerary</button>
           </div>
         </div>
@@ -1259,7 +1275,7 @@
     const toItin = e.target.closest("[data-to-itin]");
     if (toItin) {
       const s = db.Saved.find(r => r.id === toItin.dataset.toItin);
-      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id });
+      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, link_url: s.link_url, link_label: s.link_label, saved_id: s.id });
       return;
     }
     const card = e.target.closest(".card[data-sheet]");
@@ -1303,6 +1319,8 @@
     $("pEndDate").min = $("pDate").value;
     $("pScheduleError").style.display = "none";
     $("pMap").value = src.map_url || "";
+    $("pLink").value = src.link_url || "";
+    $("pLinkLabel").value = src.link_label || "";
     $("pNotes").value = src.notes || "";
     $("pNameError").style.display = "none";
     $("pScheduleField").classList.toggle("hidden", !isItin);
@@ -1334,6 +1352,8 @@
       area: $("pAreaField").classList.contains("hidden") ? "" : $("pArea").value,
       notes: $("pNotes").value.trim(),
       map_url: $("pMap").value.trim(),
+      link_url: $("pLink").value.trim(),
+      link_label: $("pLinkLabel").value.trim(),
     };
     if (sheet === "Itinerary") {
       const date = $("pDate").value, time = $("pTime").value;
@@ -1375,7 +1395,7 @@
   $("pToItin").addEventListener("click", () => {
     const s = sheetCtx.row;
     closePlaceSheet();
-    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id }), 260);
+    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, link_url: s.link_url, link_label: s.link_label, saved_id: s.id }), 260);
   });
   $("fab").addEventListener("click", () => openPlaceSheet(currentTab === "saved" ? "Saved" : "Itinerary", null));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetCtx) closePlaceSheet(); });

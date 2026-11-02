@@ -320,6 +320,15 @@
   }
   .group-title { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
   .group-sub { font-size: 13px; color: var(--hint); font-weight: 600; white-space: nowrap; }
+  .subgroup-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 16px 2px 8px;
+  }
+  .group-head + .subgroup-title { margin-top: 4px; }
   .day-pill {
     display: inline-block;
     font-size: 11px;
@@ -587,8 +596,9 @@
       <input class="input" type="search" id="itinSearch" placeholder="Search places or notes">
       <div class="row2">
         <select id="itinDay"></select>
-        <select id="itinArea"></select>
+        <select id="itinCity"></select>
       </div>
+      <select id="itinArea" class="hidden"></select>
       <div class="chips scroll" id="itinTags"></div>
     </div>
     <div id="itinList"></div>
@@ -600,12 +610,13 @@
       <input class="input" type="search" id="savedSearch" placeholder="Search saved places">
       <div class="row2">
         <select id="savedGroup">
-          <option value="area">Group by area</option>
-          <option value="tag">Group by tag</option>
+          <option value="area">By city &amp; area</option>
+          <option value="tag">By tag</option>
           <option value="none">No grouping</option>
         </select>
-        <select id="savedArea"></select>
+        <select id="savedCity"></select>
       </div>
+      <select id="savedArea" class="hidden"></select>
       <div class="chips scroll" id="savedTags"></div>
     </div>
     <div id="savedList"></div>
@@ -740,6 +751,11 @@
     </div>
 
     <div class="field">
+      <label>City</label>
+      <select class="input" id="pCity"></select>
+    </div>
+
+    <div class="field" id="pAreaField">
       <label>Area <span class="opt">(optional)</span></label>
       <select class="input" id="pArea"></select>
     </div>
@@ -787,7 +803,8 @@
     { name: "Transportation", emoji: "🚆", itineraryOnly: true },
   ];
 
-  const AREAS = [
+  // Each city's areas; a city with no areas just skips the area picker.
+  const TOKYO_AREAS = [
     { name: "Asakusa / Ueno",               emoji: "🏯" },
     { name: "Akihabara / Kanda",            emoji: "⚡" },
     { name: "Tokyo Station / Marunouchi",   emoji: "🏙️" },
@@ -808,6 +825,13 @@
     { name: "Sengawa / Chofu",              emoji: "🥚" },
   ];
 
+  const CITIES = [
+    { name: "Tokyo",           emoji: "🗼", areas: TOKYO_AREAS },
+    { name: "Fujikawaguchiko", emoji: "🗻", areas: [] },
+    { name: "Hakone",          emoji: "♨️", areas: [] },
+  ];
+  const DEFAULT_CITY = "Tokyo";
+
   // Add a currency here to make it selectable (code → symbol, decimals shown).
   const CURRENCIES = {
     JPY: { symbol: "¥",  decimals: 0 },
@@ -825,7 +849,11 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const tagOf = name => TAGS.find(t => t.name === name);
-  const areaOf = name => AREAS.find(a => a.name === name);
+  const cityOf = name => CITIES.find(c => c.name === name);
+  const cityOfArea = area => CITIES.find(c => c.areas.some(a => a.name === area));
+  const areaOf = name => CITIES.flatMap(c => c.areas).find(a => a.name === name);
+  // Rows saved before cities existed have only an area; infer the city from it.
+  const rowCity = r => r.city || cityOfArea(r.area)?.name || "";
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
   const list = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean);
 
@@ -976,12 +1004,21 @@
   function mapsUrl(row) {
     if (/^https?:\/\//i.test(row.map_url || "")) return row.map_url;
     const area = row.area ? " " + row.area.split("/")[0].trim() : "";
-    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${row.name}${area} Tokyo`);
+    const city = " " + (rowCity(row) || "Japan");
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${row.name}${area}${city}`);
   }
 
-  function areaOptions(select, allLabel) {
+  function cityOptions(select, allLabel) {
     select.innerHTML = `<option value="">${allLabel}</option>` +
-      AREAS.map(a => `<option value="${esc(a.name)}">${a.emoji} ${esc(a.name)}</option>`).join("");
+      CITIES.map(c => `<option value="${esc(c.name)}">${c.emoji} ${esc(c.name)}</option>`).join("");
+  }
+
+  // Fills an area select with one city's areas; hides it when that city has none.
+  function areaOptions(select, allLabel, city, hideEl = select) {
+    const areas = cityOf(city)?.areas || [];
+    select.innerHTML = `<option value="">${allLabel}</option>` +
+      areas.map(a => `<option value="${esc(a.name)}">${a.emoji} ${esc(a.name)}</option>`).join("");
+    hideEl.classList.toggle("hidden", !areas.length);
   }
 
   function tagFilterChips(el, tags, selected, onChange) {
@@ -997,16 +1034,18 @@
 
   function matchesQuery(row, q) {
     if (!q) return true;
-    return [row.name, row.notes, row.area, row.tag].join(" ").toLowerCase().includes(q.toLowerCase());
+    return [row.name, row.notes, rowCity(row), row.area, row.tag].join(" ").toLowerCase().includes(q.toLowerCase());
   }
 
   function placeCardBody(row, extraPills = "") {
     const tag = tagOf(row.tag);
     const area = areaOf(row.area);
+    const city = cityOf(rowCity(row));
     return `
       <div class="title">${tag ? tag.emoji + " " : ""}${esc(row.name)}</div>
       <div class="meta">
         ${tag ? `<span class="pill">${esc(tag.name)}</span>` : ""}
+        ${city ? `<span class="pill">${city.emoji} ${esc(city.name)}</span>` : ""}
         ${row.area ? `<span class="pill">${area ? area.emoji + " " : ""}${esc(row.area)}</span>` : ""}
         ${extraPills}
       </div>
@@ -1018,8 +1057,9 @@
   }
 
   // ─── Itinerary ───────────────────────────────────────────────
-  const itinFilter = { q: "", day: "", area: "", tags: new Set() };
-  areaOptions($("itinArea"), "All areas");
+  const itinFilter = { q: "", day: "", city: "", area: "", tags: new Set() };
+  cityOptions($("itinCity"), "All cities");
+  areaOptions($("itinArea"), "All areas", "");
 
   function renderItinerary() {
     const allDates = [...new Set(db.Itinerary.map(r => r.date).filter(Boolean))].sort();
@@ -1036,6 +1076,7 @@
 
     const rows = db.Itinerary.filter(r =>
       matchesQuery(r, itinFilter.q) &&
+      (!itinFilter.city || rowCity(r) === itinFilter.city) &&
       (!itinFilter.area || r.area === itinFilter.area) &&
       (!itinFilter.tags.size || itinFilter.tags.has(r.tag)) &&
       (!itinFilter.day || (itinFilter.day === "__none" ? !r.date : r.date === itinFilter.day))
@@ -1074,10 +1115,17 @@
   $("itinSearch").addEventListener("input", e => { itinFilter.q = e.target.value.trim(); renderItinerary(); });
   $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; renderItinerary(); });
   $("itinArea").addEventListener("change", e => { itinFilter.area = e.target.value; renderItinerary(); });
+  $("itinCity").addEventListener("change", e => {
+    itinFilter.city = e.target.value;
+    itinFilter.area = "";
+    areaOptions($("itinArea"), "All areas", itinFilter.city);
+    renderItinerary();
+  });
 
   // ─── Saved locations ─────────────────────────────────────────
-  const savedFilter = { q: "", area: "", group: store.get("japan.savedGroup", "area"), tags: new Set() };
-  areaOptions($("savedArea"), "All areas");
+  const savedFilter = { q: "", city: "", area: "", group: store.get("japan.savedGroup", "area"), tags: new Set() };
+  cityOptions($("savedCity"), "All cities");
+  areaOptions($("savedArea"), "All areas", "");
   $("savedGroup").value = savedFilter.group;
 
   function renderSaved() {
@@ -1087,6 +1135,7 @@
     const inItin = new Set(db.Itinerary.map(r => r.saved_id).filter(Boolean));
     const rows = db.Saved.filter(r =>
       matchesQuery(r, savedFilter.q) &&
+      (!savedFilter.city || rowCity(r) === savedFilter.city) &&
       (!savedFilter.area || r.area === savedFilter.area) &&
       (!savedFilter.tags.size || savedFilter.tags.has(r.tag))
     ).sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -1108,26 +1157,47 @@
 
     if (savedFilter.group === "none") { out.innerHTML = rows.map(card).join(""); return; }
 
-    const order = savedFilter.group === "area" ? AREAS.map(a => a.name) : placeTags.map(t => t.name);
-    const keyOf = r => (savedFilter.group === "area" ? r.area : r.tag) || "";
-    const groups = new Map();
-    rows.forEach(r => { const k = keyOf(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
-    const rank = k => { const i = order.indexOf(k); return k === "" ? 1e6 : i < 0 ? 1e5 : i; };
-    const label = k => {
-      if (!k) return savedFilter.group === "area" ? "No area" : "No tag";
-      const o = savedFilter.group === "area" ? areaOf(k) : tagOf(k);
-      return (o ? o.emoji + " " : "") + esc(k);
+    // Groups rows by keyOf, ordered by `order`; unknown keys after, blank key last.
+    const groupBy = (items, keyOf, order) => {
+      const groups = new Map();
+      items.forEach(r => { const k = keyOf(r) || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+      const rank = k => { const i = order.indexOf(k); return k === "" ? 1e6 : i < 0 ? 1e5 : i; };
+      return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
     };
+    const head = (title, n) => `<div class="group-head"><div class="group-title">${title}</div><span class="group-sub">${n}</span></div>`;
 
-    out.innerHTML = [...groups.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)).map(k => `
-      <div class="group">
-        <div class="group-head"><div class="group-title">${label(k)}</div><span class="group-sub">${groups.get(k).length}</span></div>
-        ${groups.get(k).map(card).join("")}
-      </div>`).join("");
+    if (savedFilter.group === "tag") {
+      out.innerHTML = groupBy(rows, r => r.tag, placeTags.map(t => t.name)).map(([k, items]) => {
+        const t = tagOf(k);
+        return `<div class="group">${head(k ? (t ? t.emoji + " " : "") + esc(k) : "No tag", items.length)}${items.map(card).join("")}</div>`;
+      }).join("");
+      return;
+    }
+
+    // City, then area within the city
+    out.innerHTML = groupBy(rows, rowCity, CITIES.map(c => c.name)).map(([city, items]) => {
+      const c = cityOf(city);
+      const title = city ? (c ? c.emoji + " " : "") + esc(city) : "No city";
+      const areas = c?.areas || [];
+      const body = !areas.length || items.every(r => !r.area)
+        ? items.map(card).join("")
+        : groupBy(items, r => r.area, areas.map(a => a.name)).map(([area, sub]) => {
+            const a = areaOf(area);
+            const subTitle = area ? (a ? a.emoji + " " : "") + esc(area) : `Anywhere in ${esc(city)}`;
+            return `<div class="subgroup-title">${subTitle} · ${sub.length}</div>${sub.map(card).join("")}`;
+          }).join("");
+      return `<div class="group">${head(title, items.length)}${body}</div>`;
+    }).join("");
   }
 
   $("savedSearch").addEventListener("input", e => { savedFilter.q = e.target.value.trim(); renderSaved(); });
   $("savedArea").addEventListener("change", e => { savedFilter.area = e.target.value; renderSaved(); });
+  $("savedCity").addEventListener("change", e => {
+    savedFilter.city = e.target.value;
+    savedFilter.area = "";
+    areaOptions($("savedArea"), "All areas", savedFilter.city);
+    renderSaved();
+  });
   $("savedGroup").addEventListener("change", e => { savedFilter.group = e.target.value; store.set("japan.savedGroup", e.target.value); renderSaved(); });
 
   // Card clicks: open editor, but let Maps links / buttons do their own thing
@@ -1136,7 +1206,7 @@
     const toItin = e.target.closest("[data-to-itin]");
     if (toItin) {
       const s = db.Saved.find(r => r.id === toItin.dataset.toItin);
-      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id });
+      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id });
       return;
     }
     const card = e.target.closest(".card[data-sheet]");
@@ -1148,7 +1218,8 @@
 
   // ─── Place sheet ─────────────────────────────────────────────
   let sheetCtx = null; // { sheet, row, prefill, tag }
-  areaOptions($("pArea"), "— No area —");
+  cityOptions($("pCity"), "— No city —");
+  $("pCity").addEventListener("change", e => areaOptions($("pArea"), "— No area —", e.target.value, $("pAreaField")));
 
   function renderPlaceTags() {
     const tags = TAGS.filter(t => sheetCtx.sheet === "Itinerary" || !t.itineraryOnly);
@@ -1166,6 +1237,10 @@
     const isItin = sheet === "Itinerary";
     $("sheetTitle").textContent = (row ? "Edit " : "Add ") + (isItin ? "stop" : "saved place");
     $("pName").value = src.name || "";
+    // New places default to the city being filtered on, else Tokyo
+    const filterCity = (isItin ? itinFilter : savedFilter).city;
+    $("pCity").value = (row || prefill.name) ? rowCity(src) : (filterCity || DEFAULT_CITY);
+    areaOptions($("pArea"), "— No area —", $("pCity").value, $("pAreaField"));
     $("pArea").value = src.area || "";
     $("pDate").value = src.date || (isItin && !row ? (itinFilter.day && itinFilter.day !== "__none" ? itinFilter.day : "") : "");
     $("pTime").value = src.time || "";
@@ -1197,7 +1272,8 @@
       id: row ? row.id : uid(),
       name,
       tag: sheetCtx.tag,
-      area: $("pArea").value,
+      city: $("pCity").value,
+      area: $("pAreaField").classList.contains("hidden") ? "" : $("pArea").value,
       notes: $("pNotes").value.trim(),
       map_url: $("pMap").value.trim(),
     };
@@ -1227,7 +1303,7 @@
   $("pToItin").addEventListener("click", () => {
     const s = sheetCtx.row;
     closePlaceSheet();
-    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id }), 260);
+    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, saved_id: s.id }), 260);
   });
   $("fab").addEventListener("click", () => openPlaceSheet(currentTab === "saved" ? "Saved" : "Itinerary", null));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetCtx) closePlaceSheet(); });

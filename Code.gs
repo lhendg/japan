@@ -14,8 +14,8 @@
  */
 
 const SCHEMA = {
-  Itinerary: ['id', 'date', 'time', 'name', 'tag', 'area', 'notes', 'map_url', 'saved_id', 'created_at', 'updated_at'],
-  Saved: ['id', 'name', 'tag', 'area', 'notes', 'map_url', 'created_at', 'updated_at'],
+  Itinerary: ['id', 'date', 'time', 'name', 'tag', 'city', 'area', 'notes', 'map_url', 'saved_id', 'created_at', 'updated_at'],
+  Saved: ['id', 'name', 'tag', 'city', 'area', 'notes', 'map_url', 'created_at', 'updated_at'],
   Expenses: ['id', 'date', 'description', 'amount', 'currency', 'payment_method', 'payment_tag', 'payment_notes',
     'labels', 'split', 'split_type', 'split_amount_lhen', 'split_amount_owen', 'paid_by', 'notes', 'updated_by',
     'created_at', 'updated_at'],

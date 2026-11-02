@@ -772,7 +772,7 @@
 <script>
   // ─── CUSTOMIZE HERE ───────────────────────────────────────────
   // Apps Script web app URL (ends in /exec). Leave empty for demo mode (this device only).
-  const API_URL = "";
+  const API_URL = "https://script.google.com/macros/s/AKfycbzADHeS98zt0_uYI4jdgkzPiOs30u2gzEPl3p_Y1WXIy77hqbaaNZ89t8zT80j0xtt-/exec";
 
   const PEOPLE              = ["Lhen", "Owen"];
   const RECORDED_BY_DEFAULT = "Lhen";
@@ -886,7 +886,8 @@
 
   async function apiLoad() {
     if (!API_URL) return store.get("japan.demo", EMPTY_DB());
-    const res = await fetch(API_URL + "?action=list");
+    const get = () => fetch(API_URL + "?action=list");
+    const res = await get().catch(() => new Promise(r => setTimeout(r, 800)).then(get));
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || "Load failed");
     return json.data;
@@ -900,11 +901,13 @@
       return;
     }
     // text/plain avoids a CORS preflight, which Apps Script cannot answer
-    const res = await fetch(API_URL, {
+    const send = () => fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action, sheet, data }),
     });
+    // A cold Apps Script sometimes drops the first request; writes are keyed by id, so one retry is safe.
+    const res = await send().catch(() => new Promise(r => setTimeout(r, 800)).then(send));
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || "Save failed");
     return json.data;

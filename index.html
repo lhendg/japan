@@ -329,24 +329,19 @@
     margin: 16px 2px 8px;
   }
   .group-head + .subgroup-title { margin-top: 4px; }
-  .drag-handle {
-    display: block;
-    margin-top: 6px;
-    width: 36px;
+  .order-arrows { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .arrow-btn {
+    width: 38px;
     height: 32px;
-    line-height: 32px;
-    text-align: center;
-    font-size: 20px;
-    color: var(--hint);
-    border-radius: 8px;
-    cursor: grab;
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--card-2);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
   }
-  .drag-handle:active { background: var(--card-2); color: var(--text); }
-  .card.dragging { box-shadow: 0 12px 28px rgba(0,0,0,0.55); border-color: rgba(255,138,61,0.6); opacity: 0.97; cursor: grabbing; }
-  .drop-slot { border: 2px dashed rgba(255,138,61,0.45); border-radius: 14px; margin-bottom: 10px; }
+  .arrow-btn:active { background: var(--accent); }
+  .arrow-btn:disabled { opacity: 0.25; cursor: default; }
   .day-pill {
     display: inline-block;
     font-size: 11px;
@@ -792,6 +787,11 @@
       <div class="error-text" id="pScheduleError"></div>
     </div>
 
+    <div class="field hidden" id="pOrderField">
+      <label>Order <span class="opt">(for stops with no date yet: 1 shows first)</span></label>
+      <input class="input" id="pOrder" type="number" inputmode="decimal" step="any" placeholder="e.g. 1">
+    </div>
+
     <div class="field">
       <label>Maps link <span class="opt">(optional, shows a Maps button)</span></label>
       <input class="input" id="pMap" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/…">
@@ -1143,8 +1143,52 @@
     return { col, pills };
   }
 
+  // Undated stops sort by their Order (sort_order); ones without an order go last, oldest first
+  const manualOrder = r => { const n = parseFloat(r.sort_order); return Number.isFinite(n) ? n : Infinity; };
+  const byManualOrder = (a, b) => (manualOrder(a) - manualOrder(b)) || (a.created_at || "").localeCompare(b.created_at || "");
+
+  // Time column for an undated stop: its order number, time if any, and ▲▼
+  function orderCol(r, i, count) {
+    const n = parseFloat(r.sort_order);
+    return (Number.isFinite(n) ? `#${esc(String(n))}` : `<small>—</small>`) +
+      (r.time ? `<small>${esc(clock(r.time))}</small>` : "") +
+      (count > 1 ? `<div class="order-arrows">
+        <button class="arrow-btn" data-stop data-move="-1" data-id="${esc(r.id)}" aria-label="Move up"${i === 0 ? " disabled" : ""}>▲</button>
+        <button class="arrow-btn" data-stop data-move="1" data-id="${esc(r.id)}" aria-label="Move down"${i === count - 1 ? " disabled" : ""}>▼</button>
+      </div>` : "");
+  }
+
+  // ▲▼: swap with the neighbour shown on screen, then number every undated stop 1, 2, 3…
+  let orderWrites = Promise.resolve();
+  document.addEventListener("click", e => {
+    const btn = e.target.closest("[data-move]");
+    if (!btn || btn.disabled) return;
+    const shown = [...btn.closest(".group").querySelectorAll(".card")].map(c => c.dataset.id);
+    const i = shown.indexOf(btn.dataset.id), j = i + Number(btn.dataset.move);
+    if (j < 0 || j >= shown.length) return;
+    const all = db.Itinerary.filter(r => !r.date).sort(byManualOrder);
+    const a = all.findIndex(r => r.id === shown[i]), b = all.findIndex(r => r.id === shown[j]);
+    [all[a], all[b]] = [all[b], all[a]];
+    const updates = all.map((r, n) => ({ id: r.id, sort_order: n + 1 })).filter((u, n) => parseFloat(all[n].sort_order) !== u.sort_order);
+    updates.forEach(u => applyLocal(db, "update", "Itinerary", u));
+    store.set("japan.cache", db);
+    renderItinerary();
+    // Saves run one after another so quick taps land in order
+    updates.forEach(u => {
+      orderWrites = orderWrites.then(() => apiWrite("update", "Itinerary", u)).catch(err => {
+        toast("Couldn't save the order: " + err.message, true);
+        refresh(true);
+      });
+    });
+  });
+
+  // Next free order number among undated stops
+  function nextOrder() {
+    const used = db.Itinerary.filter(r => !r.date).map(r => parseFloat(r.sort_order)).filter(Number.isFinite);
+    return used.length ? Math.floor(Math.max(...used)) + 1 : 1;
+  }
+
   function renderItinerary() {
-    if (drag) { drag.pendingRender = true; return; } // don't redraw under a finger
     // Every trip day, plus any stop dated outside the trip
     const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
     const allDates = [...new Set([...tripDays, ...db.Itinerary.flatMap(spanDays).filter(Boolean)])].sort();
@@ -1193,24 +1237,20 @@
     // Stops already under way (from an earlier day) sort first, then by start time
     const sortTime = e => e.idx > 0 ? "00:00" : e.r.time;
 
-    // Undated stops keep the order you drag them into (sort_order), oldest first otherwise
-    const manualOrder = r => { const n = parseFloat(r.sort_order); return Number.isFinite(n) ? n : Infinity; };
 
     out.innerHTML = keys.map(k => {
       const items = groups.get(k).sort((a, b) => !k
-        ? (manualOrder(a.r) - manualOrder(b.r)) || (a.r.created_at || "").localeCompare(b.r.created_at || "")
+        ? byManualOrder(a.r, b.r)
         : (!sortTime(a)) - (!sortTime(b)) || (sortTime(a) || "").localeCompare(sortTime(b) || "") ||
           (a.r.created_at || "").localeCompare(b.r.created_at || ""));
-      // Reordering is off while a search/tag/city filter hides some of them
-      const canDrag = !k && items.length > 1 && !itinFilter.q && !itinFilter.city && !itinFilter.tags.size;
       const head = k
         ? `<div class="group-title">${dayNo(k) ? `<span class="day-pill">DAY ${dayNo(k)}</span>` : `<span class="day-pill">OUTSIDE TRIP</span>`}${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
         : `<div class="group-title">Not scheduled yet</div>`;
-      return `<div class="group"${canDrag ? " data-reorder" : ""}>
-        <div class="group-head">${head}<span class="group-sub">${canDrag ? "drag ⠿ to sort · " : ""}${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
+      return `<div class="group">
+        <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
         ${items.map(({ r, idx, total }) => { const w = whenFor(r, idx, total); return `
           <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}">
-            <div class="when">${canDrag && !r.time ? "" : w.col}${canDrag ? `<span class="drag-handle" data-stop data-drag role="button" aria-label="Drag to reorder">⠿</span>` : ""}</div>
+            <div class="when">${k ? w.col : orderCol(r, items.findIndex(x => x.r === r), items.length)}</div>
             <div class="body">
               ${placeCardBody(r, w.pills)}
               ${mapsLink(r, "Open in Maps") || extraLink(r) ? `<div class="card-actions">${mapsLink(r, "Open in Maps")}${extraLink(r)}</div>` : ""}
@@ -1219,85 +1259,6 @@
       </div>`;
     }).join("");
   }
-
-  // ─── Drag to reorder undated stops (pointer events: works for touch and mouse) ───
-  let drag = null; // { card, slot, group, offsetY, pointerId, pendingRender }
-
-  document.addEventListener("pointerdown", e => {
-    const handle = e.target.closest("[data-drag]");
-    if (!handle || drag) return;
-    e.preventDefault();
-    const card = handle.closest(".card");
-    const rect = card.getBoundingClientRect();
-    const slot = document.createElement("div");
-    slot.className = "drop-slot";
-    slot.style.height = rect.height + "px";
-    card.after(slot);
-    Object.assign(card.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", zIndex: 40 });
-    card.classList.add("dragging");
-    drag = { card, slot, group: card.closest(".group"), offsetY: e.clientY - rect.top, pointerId: e.pointerId,
-             order: [...card.closest(".group").querySelectorAll(".card")].map(c => c.dataset.id) };
-    handle.setPointerCapture?.(e.pointerId);
-  });
-
-  document.addEventListener("pointermove", e => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    e.preventDefault();
-    drag.card.style.top = (e.clientY - drag.offsetY) + "px";
-    // Put the gap before the first card whose middle is below the finger
-    const others = [...drag.group.querySelectorAll(".card")].filter(c => c !== drag.card);
-    const before = others.find(c => { const r = c.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
-    if (before) { if (drag.slot.nextElementSibling !== before) before.before(drag.slot); }
-    else if (others.length && drag.slot.previousElementSibling !== others[others.length - 1]) others[others.length - 1].after(drag.slot);
-    // Scroll when dragging near the top or bottom edge
-    if (e.clientY < 90) window.scrollBy(0, -12);
-    else if (e.clientY > window.innerHeight - 150) window.scrollBy(0, 12);
-  }, { passive: false });
-
-  async function endDrag(e) {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    const { card, slot, group } = drag;
-    slot.replaceWith(card);
-    card.removeAttribute("style");
-    card.classList.remove("dragging");
-    const pending = drag.pendingRender;
-    const drag0 = drag.order;
-    drag = null;
-
-    const ids = [...group.querySelectorAll(".card")].map(c => c.dataset.id);
-    const rowsInOrder = ids.map(id => db.Itinerary.find(r => r.id === id)).filter(Boolean);
-    const at = ids.indexOf(card.dataset.id);
-    const values = rowsInOrder.map(r => parseFloat(r.sort_order));
-    const renumber = () => rowsInOrder
-      .map((r, i) => ({ id: r.id, sort_order: (i + 1) * 1000 }))
-      .filter((u, i) => values[i] !== u.sort_order);
-
-    // Usually only the moved stop changes: it takes a value between its new neighbours.
-    // The first time (some stops have no value yet), or if there's no room, number them all 1000, 2000, …
-    let updates = [];
-    if (ids.join() !== drag0.join()) {
-      const lo = values[at - 1], hi = values[at + 1];
-      if (!values.every(Number.isFinite)) updates = renumber();
-      else if (at === 0) updates = [{ id: ids[at], sort_order: hi - 1000 }];
-      else if (at === ids.length - 1) updates = [{ id: ids[at], sort_order: lo + 1000 }];
-      else updates = hi - lo > 1e-6 ? [{ id: ids[at], sort_order: (lo + hi) / 2 }] : renumber();
-    }
-
-    // Show the whole new order at once, then save each changed stop
-    updates.forEach(u => applyLocal(db, "update", "Itinerary", u));
-    store.set("japan.cache", db);
-    if (pending || updates.length) renderItinerary();
-    if (!updates.length) return;
-    try {
-      for (const u of updates) await apiWrite("update", "Itinerary", u);
-      toast("Order saved");
-    } catch (err) {
-      toast("Couldn't save the order: " + err.message, true);
-      refresh(true);
-    }
-  }
-  document.addEventListener("pointerup", endDrag);
-  document.addEventListener("pointercancel", endDrag);
 
   $("itinSearch").addEventListener("input", e => { itinFilter.q = e.target.value.trim(); renderItinerary(); });
   $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; store.set("japan.itinDay", itinFilter.day); renderItinerary(); });
@@ -1406,7 +1367,11 @@
   // ─── Place sheet ─────────────────────────────────────────────
   let sheetCtx = null; // { sheet, row, prefill, tag }
   cityOptions($("pCity"), "— No city —");
-  $("pDate").addEventListener("change", e => { $("pEndDate").min = e.target.value; });
+  // The Order field only applies while a stop has no date
+  function toggleOrderField() {
+    $("pOrderField").classList.toggle("hidden", !(sheetCtx?.sheet === "Itinerary" && !$("pDate").value));
+  }
+  $("pDate").addEventListener("change", e => { $("pEndDate").min = e.target.value; toggleOrderField(); });
   $("pCity").addEventListener("change", e => areaOptions($("pArea"), "— No area —", e.target.value, $("pAreaField")));
 
   function renderPlaceTags() {
@@ -1435,6 +1400,8 @@
     $("pEndDate").value = src.end_date || "";
     $("pEndTime").value = src.end_time || "";
     $("pEndDate").min = $("pDate").value;
+    $("pOrder").value = src.sort_order ?? (row ? "" : nextOrder());
+    toggleOrderField();
     $("pScheduleError").style.display = "none";
     $("pMap").value = src.map_url || "";
     $("pLink").value = src.link_url || "";
@@ -1490,6 +1457,10 @@
       data.time = time;
       data.end_date = endDate === date ? "" : endDate;
       data.end_time = endTime;
+      if (!date) {
+        const order = $("pOrder").value.trim();
+        data.sort_order = order === "" ? "" : Number(order);
+      }
       data.saved_id = row ? (row.saved_id || "") : (prefill.saved_id || "");
     }
     closePlaceSheet();

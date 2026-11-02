@@ -26,7 +26,7 @@ Until `API_URL` is set, the site runs in **demo mode**: data is saved only in th
 
 | Tab | What it does |
 |---|---|
-| **Itinerary** | Stops grouped by date (Day 1, Day 2, …) and sorted by time. Stops with no date appear under *Not scheduled yet*. Filter by day, area, tag or search text. Tap a card to edit or delete it; **📍 Open in Maps** opens Google Maps in a new tab. |
+| **Itinerary** | Stops grouped by date (Day 1, Day 2, …). Every stop needs a start date; the time is optional. Each day is sorted by time, with stops that have no time at the end, until you reorder it with ▲ ▼ or the *Order* field (1 shows first). Then the day keeps your order, so you can put sightseeing between a morning stop and an evening train. Filter by day, area, tag or search text. Tap a card to edit or delete it; **📍 Open in Maps** opens Google Maps in a new tab. |
 | **Saved** | Places you might visit. Group them by area or tag, or not at all, and filter by tag or area. **＋ Itinerary** copies a place into the itinerary, and the saved card then shows *✓ In itinerary*. |
 | **Expenses** | **New expense** works like the expense_bot form, plus a currency picker (¥ JPY / ₱ PHP / $ USD). **History** shows the total in whichever currency you pick (converted at the day's rates from open.er-api.com), what each person paid and owes, who owes whom, spending by label, and the full list by day. Tap an expense to edit it. |
 

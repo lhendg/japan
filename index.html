@@ -774,7 +774,7 @@
     </div>
 
     <div class="field" id="pScheduleField">
-      <label>Start <span class="opt">(optional)</span></label>
+      <label>Start <span class="opt">(date required, time optional)</span></label>
       <div class="row2">
         <input class="input" id="pDate" type="date" aria-label="Start date">
         <input class="input" id="pTime" type="time" aria-label="Start time">
@@ -788,7 +788,7 @@
     </div>
 
     <div class="field hidden" id="pOrderField">
-      <label>Order <span class="opt">(for stops with no date yet: 1 shows first)</span></label>
+      <label>Order <span class="opt">(within the day: 1 shows first; leave blank to sort by time)</span></label>
       <input class="input" id="pOrder" type="number" inputmode="decimal" step="any" placeholder="e.g. 1">
     </div>
 
@@ -1143,30 +1143,46 @@
     return { col, pills };
   }
 
-  // Undated stops sort by their Order (sort_order); ones without an order go last, oldest first
+  // Stops with an Order (sort_order) come first, 1 first; the rest follow by time, no time last
   const manualOrder = r => { const n = parseFloat(r.sort_order); return Number.isFinite(n) ? n : Infinity; };
+  const hasOrder = r => Number.isFinite(parseFloat(r.sort_order));
   const byManualOrder = (a, b) => (manualOrder(a) - manualOrder(b)) || (a.created_at || "").localeCompare(b.created_at || "");
+  // Order within one day; stops already under way (from an earlier day) stay on top
+  const byDayOrder = (a, b) =>
+    (b.idx > 0) - (a.idx > 0) ||
+    hasOrder(b.r) - hasOrder(a.r) ||
+    (hasOrder(a.r) && manualOrder(a.r) - manualOrder(b.r)) ||
+    (!a.r.time) - (!b.r.time) || (a.r.time || "").localeCompare(b.r.time || "") ||
+    (a.r.created_at || "").localeCompare(b.r.created_at || "");
 
-  // Time column for an undated stop: its order number, time if any, and ▲▼
+  // Every stop that starts on a day ("" = no date), in the order shown
+  function dayStops(k) {
+    return db.Itinerary.filter(r => (r.date || "") === k).map(r => ({ r, idx: 0 }))
+      .sort(k ? byDayOrder : (a, b) => byManualOrder(a.r, b.r)).map(e => e.r);
+  }
+
+  const arrows = (r, i, count) => count > 1 ? `<div class="order-arrows">
+        <button class="arrow-btn" data-stop data-move="-1" data-id="${esc(r.id)}" aria-label="Move up"${i === 0 ? " disabled" : ""}>▲</button>
+        <button class="arrow-btn" data-stop data-move="1" data-id="${esc(r.id)}" aria-label="Move down"${i === count - 1 ? " disabled" : ""}>▼</button>
+      </div>` : "";
+
+  // Time column for an undated stop (only rows typed into the sheet): order number, time, ▲▼
   function orderCol(r, i, count) {
     const n = parseFloat(r.sort_order);
     return (Number.isFinite(n) ? `#${esc(String(n))}` : `<small>—</small>`) +
-      (r.time ? `<small>${esc(clock(r.time))}</small>` : "") +
-      (count > 1 ? `<div class="order-arrows">
-        <button class="arrow-btn" data-stop data-move="-1" data-id="${esc(r.id)}" aria-label="Move up"${i === 0 ? " disabled" : ""}>▲</button>
-        <button class="arrow-btn" data-stop data-move="1" data-id="${esc(r.id)}" aria-label="Move down"${i === count - 1 ? " disabled" : ""}>▼</button>
-      </div>` : "");
+      (r.time ? `<small>${esc(clock(r.time))}</small>` : "") + arrows(r, i, count);
   }
 
-  // ▲▼: swap with the neighbour shown on screen, then number every undated stop 1, 2, 3…
+  // ▲▼: swap with the neighbour shown on screen, then number every stop that day 1, 2, 3…
   let orderWrites = Promise.resolve();
   document.addEventListener("click", e => {
     const btn = e.target.closest("[data-move]");
     if (!btn || btn.disabled) return;
-    const shown = [...btn.closest(".group").querySelectorAll(".card")].map(c => c.dataset.id);
+    const group = btn.closest(".group");
+    const shown = [...group.querySelectorAll(".card[data-movable]")].map(c => c.dataset.id);
     const i = shown.indexOf(btn.dataset.id), j = i + Number(btn.dataset.move);
     if (j < 0 || j >= shown.length) return;
-    const all = db.Itinerary.filter(r => !r.date).sort(byManualOrder);
+    const all = dayStops(group.dataset.day);
     const a = all.findIndex(r => r.id === shown[i]), b = all.findIndex(r => r.id === shown[j]);
     [all[a], all[b]] = [all[b], all[a]];
     const updates = all.map((r, n) => ({ id: r.id, sort_order: n + 1 })).filter((u, n) => parseFloat(all[n].sort_order) !== u.sort_order);
@@ -1182,10 +1198,10 @@
     });
   });
 
-  // Next free order number among undated stops
-  function nextOrder() {
-    const used = db.Itinerary.filter(r => !r.date).map(r => parseFloat(r.sort_order)).filter(Number.isFinite);
-    return used.length ? Math.floor(Math.max(...used)) + 1 : 1;
+  // Next free order number on a day; blank while nobody has reordered that day (sorts by time)
+  function nextOrder(date) {
+    const used = db.Itinerary.filter(r => (r.date || "") === (date || "")).map(r => parseFloat(r.sort_order)).filter(Number.isFinite);
+    return used.length ? Math.floor(Math.max(...used)) + 1 : "";
   }
 
   function renderItinerary() {
@@ -1199,8 +1215,8 @@
     const daySel = $("itinDay");
     daySel.innerHTML = `<option value="">All days</option>` +
       allDates.map(d => `<option value="${d}">${dayLabel(d)}${esc(fmtDate(d))}</option>`).join("") +
-      `<option value="__none">Not scheduled</option>`;
-    if (itinFilter.day && itinFilter.day !== "__none" && !allDates.includes(itinFilter.day)) itinFilter.day = "";
+      (db.Itinerary.some(r => !r.date) ? `<option value="__none">Not scheduled</option>` : "");
+    if (itinFilter.day && (itinFilter.day === "__none" ? !db.Itinerary.some(r => !r.date) : !allDates.includes(itinFilter.day))) itinFilter.day = "";
     daySel.value = itinFilter.day;
 
     tagFilterChips($("itinTags"), TAGS, itinFilter.tags, renderItinerary);
@@ -1234,23 +1250,19 @@
       });
     });
     const keys = [...groups.keys()].sort((a, b) => (!a) - (!b) || a.localeCompare(b));
-    // Stops already under way (from an earlier day) sort first, then by start time
-    const sortTime = e => e.idx > 0 ? "00:00" : e.r.time;
-
-
     out.innerHTML = keys.map(k => {
-      const items = groups.get(k).sort((a, b) => !k
-        ? byManualOrder(a.r, b.r)
-        : (!sortTime(a)) - (!sortTime(b)) || (sortTime(a) || "").localeCompare(sortTime(b) || "") ||
-          (a.r.created_at || "").localeCompare(b.r.created_at || ""));
+      const items = groups.get(k).sort(k ? byDayOrder : (a, b) => byManualOrder(a.r, b.r));
+      // Only a stop's first day can be reordered
+      const movable = items.filter(e => e.idx === 0).map(e => e.r);
       const head = k
         ? `<div class="group-title">${dayNo(k) ? `<span class="day-pill">DAY ${dayNo(k)}</span>` : `<span class="day-pill">OUTSIDE TRIP</span>`}${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div>`
         : `<div class="group-title">Not scheduled yet</div>`;
-      return `<div class="group">
+      return `<div class="group" data-day="${esc(k)}">
         <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
         ${items.map(({ r, idx, total }) => { const w = whenFor(r, idx, total); return `
-          <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}">
-            <div class="when">${k ? w.col : orderCol(r, items.findIndex(x => x.r === r), items.length)}</div>
+          <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}"${idx === 0 ? " data-movable" : ""}>
+            <div class="when">${!k ? orderCol(r, movable.indexOf(r), movable.length)
+              : w.col + (idx === 0 ? arrows(r, movable.indexOf(r), movable.length) : "")}</div>
             <div class="body">
               ${placeCardBody(r, w.pills)}
               ${mapsLink(r, "Open in Maps") || extraLink(r) ? `<div class="card-actions">${mapsLink(r, "Open in Maps")}${extraLink(r)}</div>` : ""}
@@ -1367,11 +1379,16 @@
   // ─── Place sheet ─────────────────────────────────────────────
   let sheetCtx = null; // { sheet, row, prefill, tag }
   cityOptions($("pCity"), "— No city —");
-  // The Order field only applies while a stop has no date
+  // The Order field is for itinerary stops only
   function toggleOrderField() {
-    $("pOrderField").classList.toggle("hidden", !(sheetCtx?.sheet === "Itinerary" && !$("pDate").value));
+    $("pOrderField").classList.toggle("hidden", sheetCtx?.sheet !== "Itinerary");
   }
-  $("pDate").addEventListener("change", e => { $("pEndDate").min = e.target.value; toggleOrderField(); });
+  $("pDate").addEventListener("change", e => {
+    $("pEndDate").min = e.target.value;
+    // A stop moving to another day goes to the end of that day
+    if (sheetCtx && (!sheetCtx.row || e.target.value !== sheetCtx.row.date)) $("pOrder").value = nextOrder(e.target.value);
+    else if (sheetCtx) $("pOrder").value = sheetCtx.row.sort_order ?? "";
+  });
   $("pCity").addEventListener("change", e => areaOptions($("pArea"), "— No area —", e.target.value, $("pAreaField")));
 
   function renderPlaceTags() {
@@ -1400,7 +1417,7 @@
     $("pEndDate").value = src.end_date || "";
     $("pEndTime").value = src.end_time || "";
     $("pEndDate").min = $("pDate").value;
-    $("pOrder").value = src.sort_order ?? (row ? "" : nextOrder());
+    $("pOrder").value = src.sort_order ?? (row ? "" : nextOrder($("pDate").value));
     toggleOrderField();
     $("pScheduleError").style.display = "none";
     $("pMap").value = src.map_url || "";
@@ -1444,7 +1461,7 @@
       const date = $("pDate").value, time = $("pTime").value;
       const endDate = $("pEndDate").value, endTime = $("pEndTime").value;
       const problem =
-        endDate && !date ? "Add a start date first." :
+        !date ? "Add a start date." :
         endDate && endDate < date ? "The end date is before the start date." :
         (!endDate || endDate === date) && time && endTime && endTime < time ? "The end time is before the start time." : "";
       if (problem) {
@@ -1457,10 +1474,8 @@
       data.time = time;
       data.end_date = endDate === date ? "" : endDate;
       data.end_time = endTime;
-      if (!date) {
-        const order = $("pOrder").value.trim();
-        data.sort_order = order === "" ? "" : Number(order);
-      }
+      const order = $("pOrder").value.trim();
+      data.sort_order = order === "" ? "" : Number(order);
       data.saved_id = row ? (row.saved_id || "") : (prefill.saved_id || "");
     }
     closePlaceSheet();

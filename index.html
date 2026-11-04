@@ -951,7 +951,7 @@
     { name: "Harajuku / Omotesando",        emoji: "🌸" },
     { name: "Shinjuku",                     emoji: "🏙️" },
     { name: "Shimokitazawa / Setagaya",     emoji: "🎸" },
-    { name: "Roppongi / Akasaka",           emoji: "🌃" },
+    { name: "Roppongi / Akasaka / Shiba",   emoji: "🌃" },
     { name: "Odaiba / Tokyo Bay",           emoji: "🌊" },
     { name: "Ryogoku / Sumida",             emoji: "🥋" },
     { name: "Kiyosumi / Fukagawa",          emoji: "☕" },
@@ -969,6 +969,8 @@
     { name: "Hakone",          emoji: "♨️", areas: [] },
   ];
   const DEFAULT_CITY = "Tokyo";
+  // Old area names → current ones, so rows saved before a rename still match
+  const AREA_RENAMES = { "Roppongi / Akasaka": "Roppongi / Akasaka / Shiba" };
 
   // Trip dates: the Day filter always lists every day in this range (Day 1 = start)
   const TRIP_START = "2026-11-08";
@@ -1034,6 +1036,7 @@
   function normalize(data) {
     const out = EMPTY_DB();
     for (const k of Object.keys(out)) out[k] = Array.isArray(data?.[k]) ? data[k].filter(r => r && r.id) : [];
+    [...out.Itinerary, ...out.Saved].forEach(r => { if (AREA_RENAMES[r.area]) r.area = AREA_RENAMES[r.area]; });
     out.Expenses.forEach(e => {
       e.amount = Number(e.amount) || 0;
       e.split = e.split === true || String(e.split).toUpperCase() === "TRUE";

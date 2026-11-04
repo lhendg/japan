@@ -912,13 +912,11 @@
     const d = parseISO(s);
     return d ? d.toLocaleDateString(undefined, opts) : s;
   }
+  // 24-hour clock with a leading zero: "05:45", "18:00"
   function fmtTime(t) {
     const m = /^(\d{1,2}):(\d{2})/.exec(t || "");
-    if (!m) return t || "";
-    const h = +m[1];
-    return `${((h + 11) % 12) + 1}:${m[2]}`;
+    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : t || "";
   }
-  const ampm = t => { const m = /^(\d{1,2})/.exec(t || ""); return m ? (+m[1] < 12 ? "AM" : "PM") : ""; };
   function money(amount, cur) {
     const c = CURRENCIES[cur] || { symbol: cur + " ", decimals: 2 };
     const n = Number(amount) || 0;
@@ -1122,7 +1120,6 @@
     return days;
   }
 
-  const clock = t => `${fmtTime(t)} ${ampm(t)}`;
 
   // Time column + range pills for one stop on one of its days
   function whenFor(r, idx, total) {
@@ -1131,15 +1128,15 @@
       const startTxt = fmtDate(r.date, { month: "short", day: "numeric" });
       const endTxt = fmtDate(r.end_date, { month: "short", day: "numeric" });
       const col = idx === 0
-        ? (r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>From</small>`)
+        ? (r.time ? esc(fmtTime(r.time)) : `<small>From</small>`)
         : idx === total - 1
-          ? (r.end_time ? `<small>until</small>${esc(fmtTime(r.end_time))}<small>${ampm(r.end_time)}</small>` : `<small>Last day</small>`)
+          ? (r.end_time ? `<small>until</small>${esc(fmtTime(r.end_time))}` : `<small>Last day</small>`)
           : `<small>All day</small>`;
       return { col, pills: `<span class="pill">📅 ${esc(startTxt)} → ${esc(endTxt)}</span><span class="pill">Day ${idx + 1} of ${total}</span>` };
     }
-    const col = r.time ? `${esc(fmtTime(r.time))}<small>${ampm(r.time)}</small>` : `<small>—</small>`;
+    const col = r.time ? esc(fmtTime(r.time)) : `<small>—</small>`;
     const pills = r.end_time
-      ? `<span class="pill">🕘 ${r.time ? esc(clock(r.time)) + " – " : "until "}${esc(clock(r.end_time))}</span>`
+      ? `<span class="pill">🕘 ${r.time ? esc(fmtTime(r.time)) + " – " : "until "}${esc(fmtTime(r.end_time))}</span>`
       : "";
     return { col, pills };
   }
@@ -1171,7 +1168,7 @@
   function orderCol(r, i, count) {
     const n = parseFloat(r.sort_order);
     return (Number.isFinite(n) ? `#${esc(String(n))}` : `<small>—</small>`) +
-      (r.time ? `<small>${esc(clock(r.time))}</small>` : "");
+      (r.time ? `<small>${esc(fmtTime(r.time))}</small>` : "");
   }
 
   // ▲▼: swap with the neighbour shown on screen, then number every stop that day 1, 2, 3…

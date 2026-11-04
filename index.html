@@ -372,6 +372,9 @@
   .card.hl:active { background: rgba(255,138,61,0.22); }
   .ev.hl { background: var(--accent); border-left-color: #fff; color: #fff; }
   .ev.hl .ev-time { color: rgba(255,255,255,0.85); }
+  /* Optional card: greyed out with a dashed border */
+  .card.optional { background: transparent; border-style: dashed; border-color: rgba(142,142,147,0.45); opacity: 0.6; }
+  .ev.optional { background: var(--card); border: 1px dashed rgba(142,142,147,0.6); border-left: 3px solid var(--hint); opacity: 0.7; }
   .card .when {
     width: 52px;
     flex-shrink: 0;
@@ -858,10 +861,11 @@
     </div>
 
     <div class="field">
-      <label>Flag <span class="opt">(turns the card orange so it stands out)</span></label>
+      <label>Flag <span class="opt">(orange stands out; grey marks a stop as optional)</span></label>
       <div class="chips" id="pColor">
         <div class="chip" data-color="">Not flagged</div>
         <div class="chip" data-color="orange">🟠 Flagged</div>
+        <div class="chip" data-color="grey">⚪ Optional</div>
       </div>
     </div>
 
@@ -1195,6 +1199,9 @@
     return [row.name, row.notes, rowCity(row), row.area, row.tag].join(" ").toLowerCase().includes(q.toLowerCase());
   }
 
+  // Card flag: orange stands out, grey marks an optional stop
+  const flagClass = r => r.color === "orange" ? " hl" : r.color === "grey" ? " optional" : "";
+
   function placeCardBody(row, extraPills = "") {
     const tag = tagOf(row.tag);
     const area = areaOf(row.area);
@@ -1205,6 +1212,7 @@
         ${tag ? `<span class="pill">${esc(tag.name)}</span>` : ""}
         ${city ? `<span class="pill">${city.emoji} ${esc(city.name)}</span>` : ""}
         ${row.area ? `<span class="pill">${area ? area.emoji + " " : ""}${esc(row.area)}</span>` : ""}
+        ${row.color === "grey" ? `<span class="pill">Optional</span>` : ""}
         ${extraPills}
       </div>
       ${row.notes ? `<div class="notes">${esc(row.notes)}</div>` : ""}`;
@@ -1374,7 +1382,7 @@
       return `<div class="group" data-day="${esc(k)}">
         <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
         ${items.map(({ r, idx, total }) => { const w = whenFor(r, idx, total); return `
-          <div class="card${r.color === "orange" ? " hl" : ""}" data-sheet="Itinerary" data-id="${esc(r.id)}"${idx === 0 ? " data-movable" : ""}>
+          <div class="card${flagClass(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}"${idx === 0 ? " data-movable" : ""}>
             <div class="when">${k ? w.col : orderCol(r, movable.indexOf(r), movable.length)}</div>
             <div class="body">
               ${placeCardBody(r, w.pills)}
@@ -1480,7 +1488,7 @@
     }
 
     const strip = allDay.length ? `<div class="sched-allday">${allDay.map(({ r, label }) => `
-      <div class="ev${r.color === "orange" ? " hl" : ""}" style="${evStyle(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}">
+      <div class="ev${flagClass(r)}" style="${evStyle(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}">
         <b>${tagOf(r.tag) ? tagOf(r.tag).emoji + " " : ""}${esc(r.name)}</b><span class="ev-time">${esc(label)}</span>
       </div>`).join("")}</div>` : "";
 
@@ -1497,7 +1505,7 @@
       const evs = blocks.map(b => {
         const h = Math.max(y(b.end) - y(b.start) - 2, 24);
         const time = b.hasEnd ? `${minLabel(b.start)}–${minLabel(b.end)}` : minLabel(b.start);
-        return `<div class="ev${h >= 52 ? " tall" : ""}${b.r.color === "orange" ? " hl" : ""}" data-sheet="Itinerary" data-id="${esc(b.r.id)}"
+        return `<div class="ev${h >= 52 ? " tall" : ""}${flagClass(b.r)}" data-sheet="Itinerary" data-id="${esc(b.r.id)}"
           style="${evStyle(b.r)}top:${y(b.start) + 1}px;height:${h}px;left:calc(${b.col / b.cols * 100}% + 4px);width:calc(${100 / b.cols}% - 6px);">
           ${h >= 40
             ? `<b>${tagOf(b.r.tag) ? tagOf(b.r.tag).emoji + " " : ""}${esc(b.r.name)}</b><span class="ev-time">${time}</span>`
@@ -1541,7 +1549,7 @@
     if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
 
     const card = r => `
-      <div class="card${r.color === "orange" ? " hl" : ""}" data-sheet="Saved" data-id="${esc(r.id)}">
+      <div class="card${flagClass(r)}" data-sheet="Saved" data-id="${esc(r.id)}">
         <div class="body">
           ${placeCardBody(r, inItin.has(r.id) ? `<span class="pill done">✓ In itinerary</span>` : "")}
           <div class="card-actions">

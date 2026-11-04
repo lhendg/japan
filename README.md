@@ -31,7 +31,7 @@ Until `API_URL` is set, the site runs in **demo mode**: data is saved only in th
 | **Saved** | Places you might visit. Group them by area or tag, or not at all, and filter by tag or area. **＋ Itinerary** copies a place into the itinerary, and the saved card then shows *✓ In itinerary*. |
 | **Expenses** | **New expense** works like the expense_bot form, plus a currency picker (¥ JPY / ₱ PHP / $ USD). **History** shows the total in whichever currency you pick (converted at the day's rates from open.er-api.com), what each person paid and owes, who owes whom, spending by label, and the full list by day. Tap an expense to edit it. |
 
-**Flag:** set *Flag → 🟠 Flagged* in the form to make a card orange (like the DAY pill) so it stands out. On the Schedule tab a flagged stop is a solid orange block. It's saved in the sheet's `color` column.
+**Flag:** in the form, *🟠 Flagged* makes a card orange (like the DAY pill) so it stands out; on the Schedule tab it's a solid orange block. *⚪ Optional* greys a card out with a dashed border and an *Optional* pill, for maybe-stops. It's saved in the sheet's `color` column (`orange` / `grey`).
 
 **Links:** a card shows **📍 Maps** only when you paste a Maps link. Add as many *Other links* as you like (tickets, website, menu) with **＋ Add link**; each becomes a **🔗** button named by its button name, or by the site's name if you leave that blank. They're stored as a list in the sheet's `links` column.
 

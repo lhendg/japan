@@ -367,6 +367,11 @@
     cursor: pointer;
   }
   .card:active { background: #333336; }
+  /* Highlighted card: the same orange tint as the DAY pill */
+  .card.hl { background: rgba(255,138,61,0.14); border-color: rgba(255,138,61,0.45); }
+  .card.hl:active { background: rgba(255,138,61,0.22); }
+  .ev.hl { background: var(--accent); border-left-color: #fff; color: #fff; }
+  .ev.hl .ev-time { color: rgba(255,255,255,0.85); }
   .card .when {
     width: 52px;
     flex-shrink: 0;
@@ -850,6 +855,14 @@
     <div class="field">
       <label>Tag</label>
       <div class="chips" id="pTags"></div>
+    </div>
+
+    <div class="field">
+      <label>Flag <span class="opt">(turns the card orange so it stands out)</span></label>
+      <div class="chips" id="pColor">
+        <div class="chip" data-color="">Not flagged</div>
+        <div class="chip" data-color="orange">🟠 Flagged</div>
+      </div>
     </div>
 
     <div class="field">
@@ -1361,7 +1374,7 @@
       return `<div class="group" data-day="${esc(k)}">
         <div class="group-head">${head}<span class="group-sub">${items.length} stop${items.length === 1 ? "" : "s"}</span></div>
         ${items.map(({ r, idx, total }) => { const w = whenFor(r, idx, total); return `
-          <div class="card" data-sheet="Itinerary" data-id="${esc(r.id)}"${idx === 0 ? " data-movable" : ""}>
+          <div class="card${r.color === "orange" ? " hl" : ""}" data-sheet="Itinerary" data-id="${esc(r.id)}"${idx === 0 ? " data-movable" : ""}>
             <div class="when">${k ? w.col : orderCol(r, movable.indexOf(r), movable.length)}</div>
             <div class="body">
               ${placeCardBody(r, w.pills)}
@@ -1467,7 +1480,7 @@
     }
 
     const strip = allDay.length ? `<div class="sched-allday">${allDay.map(({ r, label }) => `
-      <div class="ev" style="${evStyle(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}">
+      <div class="ev${r.color === "orange" ? " hl" : ""}" style="${evStyle(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}">
         <b>${tagOf(r.tag) ? tagOf(r.tag).emoji + " " : ""}${esc(r.name)}</b><span class="ev-time">${esc(label)}</span>
       </div>`).join("")}</div>` : "";
 
@@ -1484,7 +1497,7 @@
       const evs = blocks.map(b => {
         const h = Math.max(y(b.end) - y(b.start) - 2, 24);
         const time = b.hasEnd ? `${minLabel(b.start)}–${minLabel(b.end)}` : minLabel(b.start);
-        return `<div class="ev${h >= 52 ? " tall" : ""}" data-sheet="Itinerary" data-id="${esc(b.r.id)}"
+        return `<div class="ev${h >= 52 ? " tall" : ""}${b.r.color === "orange" ? " hl" : ""}" data-sheet="Itinerary" data-id="${esc(b.r.id)}"
           style="${evStyle(b.r)}top:${y(b.start) + 1}px;height:${h}px;left:calc(${b.col / b.cols * 100}% + 4px);width:calc(${100 / b.cols}% - 6px);">
           ${h >= 40
             ? `<b>${tagOf(b.r.tag) ? tagOf(b.r.tag).emoji + " " : ""}${esc(b.r.name)}</b><span class="ev-time">${time}</span>`
@@ -1528,7 +1541,7 @@
     if (!rows.length) { out.innerHTML = emptyState("🔍", "Nothing matches these filters."); return; }
 
     const card = r => `
-      <div class="card" data-sheet="Saved" data-id="${esc(r.id)}">
+      <div class="card${r.color === "orange" ? " hl" : ""}" data-sheet="Saved" data-id="${esc(r.id)}">
         <div class="body">
           ${placeCardBody(r, inItin.has(r.id) ? `<span class="pill done">✓ In itinerary</span>` : "")}
           <div class="card-actions">
@@ -1589,7 +1602,7 @@
     const toItin = e.target.closest("[data-to-itin]");
     if (toItin) {
       const s = db.Saved.find(r => r.id === toItin.dataset.toItin);
-      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), saved_id: s.id });
+      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), color: s.color || "", saved_id: s.id });
       return;
     }
     const card = e.target.closest("[data-sheet][data-id]");
@@ -1669,6 +1682,16 @@
     row.querySelector("input").focus();
   });
 
+  function renderColorChips() {
+    $("pColor").querySelectorAll(".chip").forEach(c => c.classList.toggle("selected", c.dataset.color === sheetCtx.color));
+  }
+  $("pColor").addEventListener("click", e => {
+    const c = e.target.closest("[data-color]");
+    if (!c || !sheetCtx) return;
+    sheetCtx.color = c.dataset.color;
+    renderColorChips();
+  });
+
   function renderPlaceTags() {
     const tags = TAGS.filter(t => sheetCtx.sheet === "Itinerary" || !t.itineraryOnly);
     $("pTags").innerHTML = tags.map(t =>
@@ -1681,7 +1704,8 @@
 
   function openPlaceSheet(sheet, row, prefill = {}) {
     const src = row || prefill;
-    sheetCtx = { sheet, row, prefill, tag: src.tag || "" };
+    sheetCtx = { sheet, row, prefill, tag: src.tag || "", color: src.color || "" };
+    renderColorChips();
     const isItin = sheet === "Itinerary";
     $("sheetTitle").textContent = (row ? "Edit " : "Add ") + (isItin ? "stop" : "saved place");
     $("pName").value = src.name || "";
@@ -1730,6 +1754,7 @@
       city: $("pCity").value,
       area: $("pAreaField").classList.contains("hidden") ? "" : $("pArea").value,
       notes: $("pNotes").value.trim(),
+      color: sheetCtx.color,
       map_url: $("pMap").value.trim(),
       links: readLinkRows(),
       // Older single-link columns are folded into `links`
@@ -1778,7 +1803,7 @@
   $("pToItin").addEventListener("click", () => {
     const s = sheetCtx.row;
     closePlaceSheet();
-    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), saved_id: s.id }), 260);
+    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), color: s.color || "", saved_id: s.id }), 260);
   });
   $("fab").addEventListener("click", () => openPlaceSheet(currentTab === "saved" ? "Saved" : "Itinerary", null));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetCtx) closePlaceSheet(); });

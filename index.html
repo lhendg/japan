@@ -490,7 +490,7 @@
     right: 0;
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     background: rgba(28,28,30,0.94);
@@ -515,6 +515,61 @@
   .tabbar button .ico { font-size: 22px; filter: grayscale(1) opacity(0.6); }
   .tabbar button.active { color: var(--accent); }
   .tabbar button.active .ico { filter: none; }
+
+  /* Schedule (calendar day view) */
+  #schedDays { margin-bottom: 16px; }
+  .sched-day {
+    flex-shrink: 0;
+    min-width: 58px;
+    padding: 7px 10px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    text-align: center;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .sched-day small { display: block; font-size: 10px; font-weight: 800; color: var(--hint); letter-spacing: 0.4px; }
+  .sched-day.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sched-day.selected small { color: rgba(255,255,255,0.8); }
+  .sched-day.has-items:not(.selected) small { color: var(--accent); }
+  .sched-allday { display: grid; gap: 6px; margin-bottom: 10px; }
+  .sched-allday .ev { position: static; height: auto; }
+  .sched-grid { position: relative; margin-left: 46px; border-left: 1px solid var(--border); }
+  .sched-hour { position: absolute; left: -46px; right: 0; border-top: 1px solid var(--border); }
+  .sched-hour span {
+    position: absolute;
+    left: 0;
+    top: -8px;
+    width: 40px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--hint);
+    background: var(--bg);
+    font-variant-numeric: tabular-nums;
+  }
+  .sched-now { position: absolute; left: -4px; right: 0; border-top: 2px solid #ff453a; z-index: 2; }
+  .sched-now::before { content: ""; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: #ff453a; }
+  .ev {
+    position: absolute;
+    box-sizing: border-box;
+    padding: 4px 7px;
+    border-radius: 8px;
+    border-left: 3px solid var(--ev, var(--accent));
+    background: color-mix(in srgb, var(--ev, var(--accent)) 22%, var(--card));
+    overflow: hidden;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+  .ev:active { filter: brightness(1.2); }
+  .ev b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev .ev-time { color: var(--hint); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ev.tall b { white-space: normal; }
+  .ev b .ev-time { font-size: 11px; margin-right: 4px; }
 
   /* Bottom sheet */
   .backdrop {
@@ -616,6 +671,12 @@
       <div class="chips scroll" id="itinTags"></div>
     </div>
     <div id="itinList"></div>
+  </section>
+
+  <!-- ─── Schedule ─── -->
+  <section id="tab-schedule" class="hidden">
+    <div class="chips scroll sched-days" id="schedDays"></div>
+    <div id="schedView"></div>
   </section>
 
   <!-- ─── Saved locations ─── -->
@@ -740,6 +801,7 @@
 
   <nav class="tabbar">
     <button data-tab="itinerary" class="active"><span class="ico">🗓️</span>Itinerary</button>
+    <button data-tab="schedule"><span class="ico">🕒</span>Schedule</button>
     <button data-tab="saved"><span class="ico">📍</span>Saved</button>
     <button data-tab="expenses"><span class="ico">💴</span>Expenses</button>
   </nav>
@@ -1017,17 +1079,18 @@
   }
 
   // ─── Tabs ────────────────────────────────────────────────────
-  const TAB_TITLES = { itinerary: "itinerary", saved: "saved", expenses: "expenses" };
+  const TAB_TITLES = { itinerary: "itinerary", schedule: "schedule", saved: "saved", expenses: "expenses" };
   let currentTab = store.get("japan.tab", "itinerary");
 
   function showTab(tab) {
     currentTab = tab;
     store.set("japan.tab", tab);
     document.querySelectorAll(".tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-    ["itinerary", "saved", "expenses"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== tab));
+    ["itinerary", "schedule", "saved", "expenses"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== tab));
     $("pageTitle").innerHTML = `Japan <span>${TAB_TITLES[tab]}</span>`;
     $("fab").classList.toggle("hidden", tab === "expenses");
     window.scrollTo(0, 0);
+    if (tab === "schedule" && typeof renderSchedule === "function") renderSchedule();
   }
   document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
@@ -1271,12 +1334,134 @@
   }
 
   $("itinSearch").addEventListener("input", e => { itinFilter.q = e.target.value.trim(); renderItinerary(); });
-  $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; store.set("japan.itinDay", itinFilter.day); renderItinerary(); });
+  $("itinDay").addEventListener("change", e => { itinFilter.day = e.target.value; store.set("japan.itinDay", itinFilter.day); renderItinerary(); renderSchedule(); });
   $("itinArea").addEventListener("change", e => { itinFilter.area = e.target.value; renderItinerary(); });
   $("itinCity").addEventListener("change", e => {
     itinFilter.city = e.target.value;
     itinFilter.area = "";
     areaOptions($("itinArea"), "All areas", itinFilter.city);
+    renderItinerary();
+  });
+
+  // ─── Schedule ────────────────────────────────────────────────
+  // A calendar view of one day. Only stops with a time show; it shares the day with the Itinerary filter.
+  const SCHED_COLORS = { Restaurant: "#ff8a3d", Cafe: "#c8915a", Experience: "#bf5af2", View: "#30d158", Shopping: "#ff375f", Transportation: "#0a84ff" };
+  const HOUR_PX = 60;
+  const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
+  const minLabel = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+  // The day shown: the Itinerary's day if one is picked, else today during the trip, else Day 1
+  function schedDay() {
+    if (/^\d{4}-/.test(itinFilter.day)) return itinFilter.day;
+    const t = todayISO();
+    return t >= TRIP_START && t <= TRIP_END ? t : TRIP_START;
+  }
+
+  // Timed entries on one day: blocks for the grid, and multi-day stops for the strip above it
+  function schedEntries(k) {
+    const blocks = [], allDay = [];
+    db.Itinerary.forEach(r => {
+      const days = spanDays(r), idx = days.indexOf(k);
+      if (idx < 0) return;
+      const start = toMin(r.time), end = toMin(r.end_time);
+      if (days.length > 1) {
+        if (start === null && end === null) return;
+        const label = idx === 0 ? (start !== null ? `from ${minLabel(start)}` : "starts")
+          : idx === days.length - 1 ? (end !== null ? `until ${minLabel(end)}` : "last day") : "all day";
+        allDay.push({ r, label: `${label} · day ${idx + 1} of ${days.length}` });
+      } else if (start !== null) {
+        blocks.push({ r, start, end: end !== null && end > start ? end : start + 30, hasEnd: end !== null && end > start });
+      }
+    });
+    return { blocks, allDay };
+  }
+
+  // Side-by-side columns for overlapping blocks
+  function layoutBlocks(blocks) {
+    blocks.sort((a, b) => a.start - b.start || b.end - a.end);
+    let cluster = [], clusterEnd = -1;
+    const flush = () => {
+      const cols = [];
+      cluster.forEach(b => {
+        let c = cols.findIndex(end => end <= b.start);
+        if (c < 0) { c = cols.length; cols.push(0); }
+        cols[c] = b.end;
+        b.col = c;
+      });
+      cluster.forEach(b => { b.cols = cols.length; });
+      cluster = [];
+    };
+    blocks.forEach(b => {
+      if (b.start >= clusterEnd) { flush(); clusterEnd = -1; }
+      cluster.push(b);
+      clusterEnd = Math.max(clusterEnd, b.end);
+    });
+    flush();
+    return blocks;
+  }
+
+  function evStyle(r) {
+    const c = SCHED_COLORS[r.tag];
+    return c ? `--ev:${c};` : "";
+  }
+
+  function renderSchedule() {
+    const k = schedDay();
+    const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
+    const allDates = [...new Set([...tripDays, ...db.Itinerary.flatMap(spanDays).filter(Boolean), k])].sort();
+    const dayNo = d => tripDays.indexOf(d) + 1;
+    $("schedDays").innerHTML = allDates.map(d => {
+      const e = schedEntries(d), n = e.blocks.length + e.allDay.length;
+      return `<div class="sched-day${d === k ? " selected" : ""}${n ? " has-items" : ""}" data-sched-day="${d}">
+        <small>${dayNo(d) ? "DAY " + dayNo(d) : "OUTSIDE"}</small>${esc(fmtDate(d, { weekday: "short", day: "numeric" }))}</div>`;
+    }).join("");
+    const sel = $("schedDays").querySelector(".selected");
+    if (sel && currentTab === "schedule") sel.scrollIntoView({ inline: "center", block: "nearest" });
+
+    const { blocks, allDay } = schedEntries(k);
+    const out = $("schedView");
+    const head = `<div class="group-head"><div class="group-title">${dayNo(k) ? `<span class="day-pill">DAY ${dayNo(k)}</span>` : `<span class="day-pill">OUTSIDE TRIP</span>`}${esc(fmtDate(k, { weekday: "long", month: "short", day: "numeric" }))}</div></div>`;
+    if (!blocks.length && !allDay.length) {
+      out.innerHTML = head + emptyState("🕒", "Nothing with a time on this day.<br>Give a stop a start time to see it here.");
+      return;
+    }
+
+    const strip = allDay.length ? `<div class="sched-allday">${allDay.map(({ r, label }) => `
+      <div class="ev" style="${evStyle(r)}" data-sheet="Itinerary" data-id="${esc(r.id)}">
+        <b>${tagOf(r.tag) ? tagOf(r.tag).emoji + " " : ""}${esc(r.name)}</b><span class="ev-time">${esc(label)}</span>
+      </div>`).join("")}</div>` : "";
+
+    let grid = "";
+    if (blocks.length) {
+      layoutBlocks(blocks);
+      const from = Math.max(0, Math.floor(Math.min(...blocks.map(b => b.start)) / 60) - 1);
+      const to = Math.min(24, Math.ceil(Math.max(...blocks.map(b => b.end)) / 60) + 1);
+      const y = m => (m - from * 60) / 60 * HOUR_PX;
+      const hours = [];
+      for (let h = from; h <= to; h++) hours.push(`<div class="sched-hour" style="top:${y(h * 60)}px"><span>${h < 24 ? minLabel(h * 60) : ""}</span></div>`);
+      const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+      const nowLine = k === todayISO() && nowMin >= from * 60 && nowMin <= to * 60 ? `<div class="sched-now" style="top:${y(nowMin)}px"></div>` : "";
+      const evs = blocks.map(b => {
+        const h = Math.max(y(b.end) - y(b.start) - 2, 24);
+        const time = b.hasEnd ? `${minLabel(b.start)}–${minLabel(b.end)}` : minLabel(b.start);
+        return `<div class="ev${h >= 52 ? " tall" : ""}" data-sheet="Itinerary" data-id="${esc(b.r.id)}"
+          style="${evStyle(b.r)}top:${y(b.start) + 1}px;height:${h}px;left:calc(${b.col / b.cols * 100}% + 4px);width:calc(${100 / b.cols}% - 6px);">
+          ${h >= 40
+            ? `<b>${tagOf(b.r.tag) ? tagOf(b.r.tag).emoji + " " : ""}${esc(b.r.name)}</b><span class="ev-time">${time}</span>`
+            : `<b><span class="ev-time">${minLabel(b.start)}</span>${tagOf(b.r.tag) ? tagOf(b.r.tag).emoji + " " : ""}${esc(b.r.name)}</b>`}
+        </div>`;
+      }).join("");
+      grid = `<div class="sched-grid" style="height:${(to - from) * HOUR_PX}px">${hours.join("")}${nowLine}${evs}</div>`;
+    }
+    out.innerHTML = head + strip + grid;
+  }
+
+  $("schedDays").addEventListener("click", e => {
+    const d = e.target.closest("[data-sched-day]");
+    if (!d) return;
+    itinFilter.day = d.dataset.schedDay;
+    store.set("japan.itinDay", itinFilter.day);
+    renderSchedule();
     renderItinerary();
   });
 
@@ -1367,7 +1552,7 @@
       if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, link_url: s.link_url, link_label: s.link_label, saved_id: s.id });
       return;
     }
-    const card = e.target.closest(".card[data-sheet]");
+    const card = e.target.closest("[data-sheet][data-id]");
     if (card) {
       const row = db[card.dataset.sheet].find(r => r.id === card.dataset.id);
       if (row) openPlaceSheet(card.dataset.sheet, row);
@@ -1862,6 +2047,7 @@
   // ─── Boot ────────────────────────────────────────────────────
   function renderAll() {
     renderItinerary();
+    renderSchedule();
     renderSaved();
     renderExpenses();
     if (!editingExpense) renderLabelChips();

@@ -838,6 +838,7 @@
 
     <div class="field" id="pScheduleField">
       <label>Start <span class="opt">(date required, time optional)</span></label>
+      <select class="input" id="pDay" aria-label="Trip day" style="margin-bottom:10px;"></select>
       <div class="row2">
         <input class="input" id="pDate" type="date" aria-label="Start date">
         <input class="input" id="pTime" type="time" aria-label="Start time">
@@ -1566,7 +1567,21 @@
   function toggleOrderField() {
     $("pOrderField").classList.toggle("hidden", sheetCtx?.sheet !== "Itinerary");
   }
+  // Day dropdown: picking a trip day fills in the start date, and a typed date selects its day
+  function syncDaySelect() {
+    const date = $("pDate").value;
+    const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
+    $("pDay").innerHTML = `<option value="">${date ? "Other date" : "Pick a day…"}</option>` +
+      tripDays.map((d, i) => `<option value="${d}">Day ${i + 1} · ${esc(fmtDate(d, { weekday: "short", month: "short", day: "numeric" }))}</option>`).join("");
+    $("pDay").value = tripDays.includes(date) ? date : "";
+  }
+  $("pDay").addEventListener("change", e => {
+    if (!e.target.value) return;
+    $("pDate").value = e.target.value;
+    $("pDate").dispatchEvent(new Event("change"));
+  });
   $("pDate").addEventListener("change", e => {
+    syncDaySelect();
     $("pEndDate").min = e.target.value;
     // A stop moving to another day goes to the end of that day
     if (sheetCtx && (!sheetCtx.row || e.target.value !== sheetCtx.row.date)) $("pOrder").value = nextOrder(e.target.value);
@@ -1596,6 +1611,7 @@
     areaOptions($("pArea"), "— No area —", $("pCity").value, $("pAreaField"));
     $("pArea").value = src.area || "";
     $("pDate").value = src.date || (isItin && !row ? (itinFilter.day && itinFilter.day !== "__none" ? itinFilter.day : "") : "");
+    syncDaySelect();
     $("pTime").value = src.time || "";
     $("pEndDate").value = src.end_date || "";
     $("pEndTime").value = src.end_time || "";

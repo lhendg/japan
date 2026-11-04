@@ -571,6 +571,32 @@
   .ev.tall b { white-space: normal; }
   .ev b .ev-time { font-size: 11px; margin-right: 4px; }
 
+  /* Link rows in the place sheet */
+  .link-row { display: grid; gap: 8px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .link-row-2 { display: flex; gap: 8px; }
+  .link-row-2 .input { flex: 1; min-width: 0; }
+  .link-remove {
+    width: 46px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card-2);
+    color: var(--hint);
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .add-link {
+    width: 100%;
+    padding: 11px;
+    border-radius: 12px;
+    border: 1.5px dashed var(--border);
+    background: transparent;
+    color: var(--link);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
   /* Bottom sheet */
   .backdrop {
     position: fixed;
@@ -837,17 +863,18 @@
     </div>
 
     <div class="field" id="pScheduleField">
-      <label>Start <span class="opt">(date required, time optional)</span></label>
-      <select class="input" id="pDay" aria-label="Trip day" style="margin-bottom:10px;"></select>
+      <label>Start <span class="opt">(day required, time optional)</span></label>
       <div class="row2">
-        <input class="input" id="pDate" type="date" aria-label="Start date">
+        <select class="input" id="pDay" aria-label="Start day"></select>
         <input class="input" id="pTime" type="time" aria-label="Start time">
       </div>
-      <label style="margin-top:14px;">End <span class="opt">(optional — leave the date blank if it ends the same day)</span></label>
+      <label style="margin-top:14px;">End <span class="opt">(optional — pick a later day only if it runs over several days)</span></label>
       <div class="row2">
-        <input class="input" id="pEndDate" type="date" aria-label="End date">
+        <select class="input" id="pEndDay" aria-label="End day"></select>
         <input class="input" id="pEndTime" type="time" aria-label="End time">
       </div>
+      <input type="hidden" id="pDate">
+      <input type="hidden" id="pEndDate">
       <div class="error-text" id="pScheduleError"></div>
     </div>
 
@@ -862,9 +889,9 @@
     </div>
 
     <div class="field">
-      <label>Other link <span class="opt">(optional: website, tickets, reservation, menu…)</span></label>
-      <input class="input" id="pLink" type="url" inputmode="url" placeholder="https://…">
-      <input class="input" id="pLinkLabel" type="text" placeholder="Button name, e.g. Tickets (default: the site's name)" style="margin-top:10px;">
+      <label>Other links <span class="opt">(optional: website, tickets, reservation, menu…)</span></label>
+      <div id="pLinks"></div>
+      <button type="button" class="add-link" id="pAddLink">＋ Add link</button>
     </div>
 
     <div class="field">
@@ -1104,14 +1131,26 @@
     return `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener" data-stop>📍 ${text}</a>`;
   }
 
-  // The optional second link: its label, or the site's name (e.g. "klook.com")
+  // A row's other links: the `links` column (JSON list of { url, label }), or the older
+  // single link_url / link_label columns for rows saved before there could be several
+  function linksOf(row) {
+    let list = row.links;
+    if (typeof list === "string") { try { list = list.trim() ? JSON.parse(list) : []; } catch { list = []; } }
+    if (!Array.isArray(list)) list = [];
+    list = list.filter(l => l && String(l.url || "").trim());
+    if (!list.length && String(row.link_url || "").trim()) list = [{ url: row.link_url, label: row.link_label || "" }];
+    return list;
+  }
+
+  // One 🔗 button per link, named by its label or the site's name (e.g. "klook.com")
   function extraLink(row) {
-    let url = (row.link_url || "").trim();
-    if (!url) return "";
-    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-    let label = row.link_label;
-    if (!label) { try { label = new URL(url).hostname.replace(/^www\./, ""); } catch { label = "Link"; } }
-    return `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener" data-stop>🔗 ${esc(label)}</a>`;
+    return linksOf(row).map(l => {
+      let url = String(l.url).trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      let label = l.label;
+      if (!label) { try { label = new URL(url).hostname.replace(/^www\./, ""); } catch { label = "Link"; } }
+      return `<a class="link-btn" href="${esc(url)}" target="_blank" rel="noopener" data-stop>🔗 ${esc(label)}</a>`;
+    }).join("");
   }
 
   function cityOptions(select, allLabel) {
@@ -1550,7 +1589,7 @@
     const toItin = e.target.closest("[data-to-itin]");
     if (toItin) {
       const s = db.Saved.find(r => r.id === toItin.dataset.toItin);
-      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, link_url: s.link_url, link_label: s.link_label, saved_id: s.id });
+      if (s) openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), saved_id: s.id });
       return;
     }
     const card = e.target.closest("[data-sheet][data-id]");
@@ -1567,27 +1606,68 @@
   function toggleOrderField() {
     $("pOrderField").classList.toggle("hidden", sheetCtx?.sheet !== "Itinerary");
   }
-  // Day dropdown: picking a trip day fills in the start date, and a typed date selects its day
-  function syncDaySelect() {
-    const date = $("pDate").value;
+  // Day dropdowns fill the (hidden) start and end dates. A date outside the trip that a stop
+  // already has stays in the list so editing it doesn't lose it.
+  function dayOption(d) {
     const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
-    $("pDay").innerHTML = `<option value="">${date ? "Other date" : "Pick a day…"}</option>` +
-      tripDays.map((d, i) => `<option value="${d}">Day ${i + 1} · ${esc(fmtDate(d, { weekday: "short", month: "short", day: "numeric" }))}</option>`).join("");
-    $("pDay").value = tripDays.includes(date) ? date : "";
+    const n = tripDays.indexOf(d) + 1;
+    return `<option value="${d}">${n ? `Day ${n} · ` : ""}${esc(fmtDate(d, { month: "short", day: "numeric" }))}</option>`;
+  }
+  function syncDaySelect() {
+    const date = $("pDate").value, endDate = $("pEndDate").value;
+    const tripDays = spanDays({ date: TRIP_START, end_date: TRIP_END });
+    const startDays = [...new Set([...tripDays, date].filter(Boolean))].sort();
+    $("pDay").innerHTML = (date ? "" : `<option value="">Pick a day…</option>`) + startDays.map(dayOption).join("");
+    $("pDay").value = date;
+    const endDays = [...new Set([...tripDays, endDate].filter(Boolean))].sort().filter(d => !date || d > date);
+    $("pEndDay").innerHTML = `<option value="">Same day</option>` + endDays.map(dayOption).join("");
+    $("pEndDay").value = endDays.includes(endDate) ? endDate : "";
   }
   $("pDay").addEventListener("change", e => {
-    if (!e.target.value) return;
     $("pDate").value = e.target.value;
+    // An end day that is no longer after the start day goes back to "Same day"
+    if ($("pEndDate").value && $("pEndDate").value <= e.target.value) $("pEndDate").value = "";
     $("pDate").dispatchEvent(new Event("change"));
   });
+  $("pEndDay").addEventListener("change", e => { $("pEndDate").value = e.target.value; });
   $("pDate").addEventListener("change", e => {
     syncDaySelect();
-    $("pEndDate").min = e.target.value;
     // A stop moving to another day goes to the end of that day
     if (sheetCtx && (!sheetCtx.row || e.target.value !== sheetCtx.row.date)) $("pOrder").value = nextOrder(e.target.value);
     else if (sheetCtx) $("pOrder").value = sheetCtx.row.sort_order ?? "";
   });
   $("pCity").addEventListener("change", e => areaOptions($("pArea"), "— No area —", e.target.value, $("pAreaField")));
+
+  function linkRow(l = {}) {
+    const row = document.createElement("div");
+    row.className = "link-row";
+    row.innerHTML = `
+      <input class="input" type="url" inputmode="url" placeholder="https://…" data-link-url>
+      <div class="link-row-2">
+        <input class="input" type="text" placeholder="Button name, e.g. Tickets (default: the site's name)" data-link-label>
+        <button type="button" class="link-remove" aria-label="Remove link">✕</button>
+      </div>`;
+    row.querySelector("[data-link-url]").value = l.url || "";
+    row.querySelector("[data-link-label]").value = l.label || "";
+    row.querySelector(".link-remove").addEventListener("click", () => {
+      row.remove();
+      if (!$("pLinks").children.length) $("pLinks").append(linkRow());
+    });
+    return row;
+  }
+  function renderLinkRows(list) {
+    $("pLinks").replaceChildren(...(list.length ? list : [{}]).map(linkRow));
+  }
+  function readLinkRows() {
+    return [...$("pLinks").querySelectorAll(".link-row")]
+      .map(r => ({ url: r.querySelector("[data-link-url]").value.trim(), label: r.querySelector("[data-link-label]").value.trim() }))
+      .filter(l => l.url);
+  }
+  $("pAddLink").addEventListener("click", () => {
+    const row = linkRow();
+    $("pLinks").append(row);
+    row.querySelector("input").focus();
+  });
 
   function renderPlaceTags() {
     const tags = TAGS.filter(t => sheetCtx.sheet === "Itinerary" || !t.itineraryOnly);
@@ -1611,17 +1691,15 @@
     areaOptions($("pArea"), "— No area —", $("pCity").value, $("pAreaField"));
     $("pArea").value = src.area || "";
     $("pDate").value = src.date || (isItin && !row ? (itinFilter.day && itinFilter.day !== "__none" ? itinFilter.day : "") : "");
+    $("pEndDate").value = src.end_date || "";
     syncDaySelect();
     $("pTime").value = src.time || "";
-    $("pEndDate").value = src.end_date || "";
     $("pEndTime").value = src.end_time || "";
-    $("pEndDate").min = $("pDate").value;
     $("pOrder").value = src.sort_order ?? (row ? "" : nextOrder($("pDate").value));
     toggleOrderField();
     $("pScheduleError").style.display = "none";
     $("pMap").value = src.map_url || "";
-    $("pLink").value = src.link_url || "";
-    $("pLinkLabel").value = src.link_label || "";
+    renderLinkRows(linksOf(src));
     $("pNotes").value = src.notes || "";
     $("pNameError").style.display = "none";
     $("pScheduleField").classList.toggle("hidden", !isItin);
@@ -1653,14 +1731,16 @@
       area: $("pAreaField").classList.contains("hidden") ? "" : $("pArea").value,
       notes: $("pNotes").value.trim(),
       map_url: $("pMap").value.trim(),
-      link_url: $("pLink").value.trim(),
-      link_label: $("pLinkLabel").value.trim(),
+      links: readLinkRows(),
+      // Older single-link columns are folded into `links`
+      link_url: "",
+      link_label: "",
     };
     if (sheet === "Itinerary") {
       const date = $("pDate").value, time = $("pTime").value;
       const endDate = $("pEndDate").value, endTime = $("pEndTime").value;
       const problem =
-        !date ? "Add a start date." :
+        !date ? "Pick a start day." :
         endDate && endDate < date ? "The end date is before the start date." :
         (!endDate || endDate === date) && time && endTime && endTime < time ? "The end time is before the start time." : "";
       if (problem) {
@@ -1698,7 +1778,7 @@
   $("pToItin").addEventListener("click", () => {
     const s = sheetCtx.row;
     closePlaceSheet();
-    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, link_url: s.link_url, link_label: s.link_label, saved_id: s.id }), 260);
+    setTimeout(() => openPlaceSheet("Itinerary", null, { name: s.name, tag: s.tag, city: rowCity(s), area: s.area, notes: s.notes, map_url: s.map_url, links: linksOf(s), saved_id: s.id }), 260);
   });
   $("fab").addEventListener("click", () => openPlaceSheet(currentTab === "saved" ? "Saved" : "Itinerary", null));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetCtx) closePlaceSheet(); });

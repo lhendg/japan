@@ -26,12 +26,12 @@ Until `API_URL` is set, the site runs in **demo mode**: data is saved only in th
 
 | Tab | What it does |
 |---|---|
-| **Itinerary** | Stops grouped by date (Day 1, Day 2, …). Every stop needs a start date; the time is optional. Each day is sorted by time, with stops that have no time at the end, until you reorder it with ▲ ▼ or the *Order* field (1 shows first). Then the day keeps your order, so you can put sightseeing between a morning stop and an evening train. Filter by day, area, tag or search text. Tap a card to edit or delete it; **📍 Open in Maps** opens Google Maps in a new tab. |
+| **Itinerary** | Stops grouped by date (Day 1, Day 2, …). Every stop needs a start day, picked from a Day dropdown (Day 1 · Nov 8 …); the time is optional. Set an end day only for stops that run over several days. Each day is sorted by time, with stops that have no time at the end, until you reorder it with ▲ ▼ or the *Order* field (1 shows first). Then the day keeps your order, so you can put sightseeing between a morning stop and an evening train. Filter by day, area, tag or search text. Tap a card to edit or delete it; **📍 Open in Maps** opens Google Maps in a new tab. |
 | **Schedule** | A calendar view of one day, with hours down the side (24-hour clock). Only stops with a start time show; stops with no time stay in Itinerary only. A start and end time fill that span, a start time alone shows a 30-minute block, and overlapping stops sit side by side. Stops lasting several days show in a strip above the hours. Pick a day from the chips at the top (the same day as the Itinerary's Day filter) and tap a block to edit it. |
 | **Saved** | Places you might visit. Group them by area or tag, or not at all, and filter by tag or area. **＋ Itinerary** copies a place into the itinerary, and the saved card then shows *✓ In itinerary*. |
 | **Expenses** | **New expense** works like the expense_bot form, plus a currency picker (¥ JPY / ₱ PHP / $ USD). **History** shows the total in whichever currency you pick (converted at the day's rates from open.er-api.com), what each person paid and owes, who owes whom, spending by label, and the full list by day. Tap an expense to edit it. |
 
-**Links:** a card shows **📍 Maps** only when you paste a Maps link, and **🔗 …** only when you add an *Other link* (tickets, website, menu). Give it a button name, or it shows the site's name.
+**Links:** a card shows **📍 Maps** only when you paste a Maps link. Add as many *Other links* as you like (tickets, website, menu) with **＋ Add link**; each becomes a **🔗** button named by its button name, or by the site's name if you leave that blank. They're stored as a list in the sheet's `links` column.
 
 ## Customizing
 
